@@ -9,7 +9,10 @@ import { reviewService } from '../services/reviewService';
 async function requireReviewUser(request: any, reply: any) {
   const user = await authenticate(request, reply);
   if (!user || user.userId === 'guest_user') {
-    throw new AppError('Authentication required', { code: 'AUTHENTICATION_ERROR', statusCode: 401 });
+    throw new AppError('Authentication required', {
+      code: 'AUTHENTICATION_ERROR',
+      statusCode: 401,
+    });
   }
   return user;
 }
@@ -62,7 +65,7 @@ const reviews: FastifyPluginAsync = async (fastify) => {
     // Calculate distribution
     const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     filtered.forEach((r) => {
-      if (distribution.hasOwnProperty(r.rating)) {
+      if (Object.prototype.hasOwnProperty.call(distribution, r.rating)) {
         distribution[r.rating as keyof typeof distribution]++;
       }
     });

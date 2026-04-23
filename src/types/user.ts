@@ -40,7 +40,7 @@ export interface SignupInput extends UserCredentials {
   role?: Role;
 }
 
-export interface LoginInput extends UserCredentials {}
+export type LoginInput = UserCredentials;
 
 export interface AuthResponse {
   user: User;
