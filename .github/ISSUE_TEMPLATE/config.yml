@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/earthkingdomuniverse-cell/workai/discussions
+    about: Dùng Discussions cho câu hỏi mở, ý tưởng hoặc trao đổi kiến trúc.
+  - name: Security Reporting
+    url: https://github.com/earthkingdomuniverse-cell/workai/security
+    about: Không đăng lỗ hổng bảo mật công khai qua Issues.

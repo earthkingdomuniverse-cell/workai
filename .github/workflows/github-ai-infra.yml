@@ -1,0 +1,312 @@
+name: 🤖 GitHub Product Infrastructure
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  issue-triage:
+    name: 🧭 Triage Product Feedback
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏷️ Classify and guide issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const title = (issue.title || '').toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+
+            const catalog = [
+              { name: 'product', color: '0e8a16', description: 'Product-facing work item or feedback' },
+              { name: 'feature', color: '1d76db', description: 'New feature or capability' },
+              { name: 'bug', color: 'd73a4a', description: 'Defect affecting behavior' },
+              { name: 'backend', color: '5319e7', description: 'Backend/API impact' },
+              { name: 'mobile', color: 'fbca04', description: 'Mobile app impact' },
+              { name: 'ai', color: '0052cc', description: 'AI flow or assistant impact' },
+              { name: 'admin', color: 'c2e0c6', description: 'Admin or trust operations impact' },
+              { name: 'docs', color: '0075ca', description: 'Documentation or product communication change' },
+              { name: 'needs-repro', color: 'b60205', description: 'More reproduction detail needed' },
+              { name: 'needs-spec', color: 'd4c5f9', description: 'Needs clearer product outcome or specification' },
+              { name: 'priority:high', color: 'b60205', description: 'High product priority' },
+              { name: 'priority:medium', color: 'fbca04', description: 'Medium product priority' },
+              { name: 'priority:low', color: 'c5def5', description: 'Low product priority' }
+            ];
+
+            for (const label of catalog) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                });
+              } catch (error) {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+              }
+            }
+
+            const labels = new Set(issue.labels.map((label) => typeof label === 'string' ? label : label.name));
+            labels.add('product');
+
+            const isBug = title.includes('[bug]') || labels.has('bug') || body.includes('mô tả lỗi') || body.includes('steps to reproduce');
+            const isFeature = title.includes('[feature]') || labels.has('feature') || body.includes('giải pháp mong muốn') || body.includes('kết quả kỳ vọng');
+
+            if (isBug) labels.add('bug');
+            if (isFeature) labels.add('feature');
+
+            if (body.includes('backend') || body.includes('api') || body.includes('/api/') || title.includes('api')) labels.add('backend');
+            if (body.includes('mobile') || body.includes('expo') || body.includes('ios') || body.includes('android')) labels.add('mobile');
+            if (body.includes('ai') || body.includes('match') || body.includes('price') || body.includes('support')) labels.add('ai');
+            if (body.includes('admin') || body.includes('operator') || body.includes('trust') || body.includes('fraud') || body.includes('dispute')) labels.add('admin');
+            if (body.includes('docs') || body.includes('readme') || body.includes('documentation')) labels.add('docs');
+
+            if (isBug && !body.includes('tái hiện') && !body.includes('repro')) labels.add('needs-repro');
+            if (isFeature && !body.includes('kết quả kỳ vọng') && !body.includes('outcome')) labels.add('needs-spec');
+
+            const highPriorityHints = ['critical', 'blocker', 'production', 'urgent', 'revenue', 'security', 'payment', 'auth'];
+            const lowPriorityHints = ['nice to have', 'cosmetic', 'copy update', 'wording'];
+
+            if (highPriorityHints.some((hint) => title.includes(hint) || body.includes(hint))) {
+              labels.add('priority:high');
+            } else if (lowPriorityHints.some((hint) => title.includes(hint) || body.includes(hint))) {
+              labels.add('priority:low');
+            } else {
+              labels.add('priority:medium');
+            }
+
+            await github.rest.issues.setLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: Array.from(labels).filter(Boolean),
+            });
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const marker = '### 🧭 Product triage';
+            const bodyComment = `${marker}
+
+            This issue has been triaged as part of the product operating workflow.
+
+            Applied labels:
+            ${Array.from(labels).map((label) => `- \`${label}\``).join('\n')}
+
+            Next actions:
+            - If this is a bug, add exact reproduction steps, expected behavior and impacted area.
+            - If this is a feature, clarify user segment, expected outcome and what metric should improve.
+            - If this touches product copy or docs, link the target screen, flow or document.
+            `;
+
+            const existing = comments.find((comment) =>
+              comment.user.type === 'Bot' && comment.body.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: bodyComment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: bodyComment,
+              });
+            }
+
+  pr-context:
+    name: 🧭 Summarize PR Context
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 💬 Post PR context comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            const groups = {
+              backend: files.filter((file) => file.filename.startsWith('src/')).length,
+              mobile: files.filter((file) => file.filename.startsWith('mobile/')).length,
+              github: files.filter((file) => file.filename.startsWith('.github/')).length,
+              docs: files.filter((file) => file.filename.endsWith('.md') || file.filename.startsWith('docs/')).length,
+            };
+
+            const touched = Object.entries(groups)
+              .filter(([, count]) => count > 0)
+              .map(([name, count]) => `- \`${name}\`: ${count} file(s)`)
+              .join('\n') || '- No grouped areas detected';
+
+            const totalChanges = files.reduce((sum, file) => sum + file.changes, 0);
+            const body = `### 🧭 PR context
+
+            This PR touches **${files.length} file(s)** with **${totalChanges} line changes**.
+
+            ${touched}
+
+            Suggested checks:
+            - Backend changes: \`npm run lint && npm run typecheck && npm run test:coverage\`
+            - Mobile changes: verify affected screens manually in Expo and confirm navigation plus key actions still work.
+            - GitHub config changes: verify Actions permissions, branch filters, and required secrets are still correct.
+
+            This comment is generated from changed files only and uses GitHub-native automation.`;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) =>
+              comment.user.type === 'Bot' && comment.body.includes('### 🧭 PR context')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  product-digest:
+    name: 📦 Publish Weekly Product Digest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📝 Build and publish digest
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            try {
+              await github.rest.issues.getLabel({
+                owner,
+                repo,
+                name: 'product',
+              });
+            } catch (error) {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: 'product',
+                color: '0e8a16',
+                description: 'Product-facing work item or feedback',
+              });
+            }
+
+            const [openIssues, openPrs, releases] = await Promise.all([
+              github.paginate(github.rest.issues.listForRepo, {
+                owner,
+                repo,
+                state: 'open',
+                per_page: 100,
+              }),
+              github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: 'open',
+                per_page: 100,
+              }),
+              github.paginate(github.rest.repos.listReleases, {
+                owner,
+                repo,
+                per_page: 20,
+              }),
+            ]);
+
+            const onlyIssues = openIssues.filter((item) => !item.pull_request);
+            const countByLabel = (label) =>
+              onlyIssues.filter((issue) => issue.labels.some((entry) => (typeof entry === 'string' ? entry : entry.name) === label)).length;
+
+            const latestRelease = releases[0];
+            const digestTitle = `Product Digest - ${new Date().toISOString().slice(0, 10)}`;
+            const digestBody = `## Product Digest
+
+            ### Open demand
+            - Open issues: **${onlyIssues.length}**
+            - Feature requests: **${countByLabel('feature')}**
+            - Bugs: **${countByLabel('bug')}**
+            - High priority items: **${countByLabel('priority:high')}**
+
+            ### Delivery
+            - Open pull requests: **${openPrs.length}**
+            - Latest release: **${latestRelease ? latestRelease.tag_name : 'No release yet'}**
+
+            ### Operational focus
+            - Review issues labeled \`needs-spec\` and \`needs-repro\`
+            - Close stale items that no longer map to a product outcome
+            - Promote release-ready PRs into the next tagged release
+
+            _Generated automatically by GitHub Actions to keep the repository operating like a product._`;
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const existing = issues.find((issue) => issue.title.startsWith('Product Digest - '));
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                title: digestTitle,
+                body: digestBody,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: digestTitle,
+                body: digestBody,
+                labels: ['product'],
+              });
+            }

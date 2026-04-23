@@ -1,11 +1,26 @@
 name: ✨ Feature Request
 description: Suggest an idea for WorkAI
+title: '[Feature] '
+labels:
+  - feature
+  - product
 body:
   - type: textarea
     id: problem
     attributes:
       label: Vấn đề của bạn có liên quan đến một trở ngại nào không?
-      description: Mô tả rõ ràng và ngắn gọn về vấn đề là gì. Ví dụ: Tôi luôn bực bội khi [...]
+      description: 'Mô tả rõ ràng và ngắn gọn về vấn đề là gì. Ví dụ: Tôi luôn bực bội khi [...]'
+    validations:
+      required: true
+  - type: dropdown
+    id: segment
+    attributes:
+      label: Nhóm người dùng chịu tác động chính
+      options:
+        - Client
+        - Provider
+        - Operator / Admin
+        - Internal team
     validations:
       required: true
   - type: textarea
@@ -13,6 +28,14 @@ body:
     attributes:
       label: Giải pháp mong muốn
       description: Mô tả rõ ràng và ngắn gọn về những gì bạn muốn xảy ra.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Kết quả kỳ vọng
+      description: Nếu triển khai, chỉ số hoặc hành vi nào sẽ cải thiện?
+      placeholder: Tăng conversion proposal, giảm thời gian xử lý dispute, tăng retention tuần 1...
     validations:
       required: true
   - type: textarea

@@ -13,8 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../../theme';
-import notificationService, { type Notification, type NotificationType } from '../../src/services/notificationService';
-import LoadingState from '../../src/components/LoadingState';
+import notificationService, {
+  type Notification,
+  type NotificationType,
+} from '../../src/services/notificationService';
+import LoadingState from '../../components/LoadingState';
 
 const notificationIcons: Record<NotificationType, string> = {
   message: 'chatbubble',
@@ -51,12 +54,12 @@ export default function NotificationsScreen() {
     try {
       if (showLoading) setIsLoading(true);
       setError(null);
-      
+
       const [notificationsData, countData] = await Promise.all([
         notificationService.getNotifications({ limit: 50 }),
         notificationService.getUnreadCount(),
       ]);
-      
+
       setNotifications(notificationsData.items);
       setUnreadCount(countData);
     } catch (err) {
@@ -81,9 +84,7 @@ export default function NotificationsScreen() {
     try {
       await notificationService.markAsRead(id);
       setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n
-        )
+        prev.map((n) => (n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n)),
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
@@ -93,7 +94,7 @@ export default function NotificationsScreen() {
 
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
-    
+
     try {
       setIsMarkingAll(true);
       await notificationService.markAllAsRead();
@@ -102,7 +103,7 @@ export default function NotificationsScreen() {
           ...n,
           read: true,
           readAt: n.readAt || new Date().toISOString(),
-        }))
+        })),
       );
       setUnreadCount(0);
     } catch (err) {
@@ -114,33 +115,29 @@ export default function NotificationsScreen() {
   };
 
   const handleDeleteNotification = async (id: string) => {
-    Alert.alert(
-      'Delete Notification',
-      'Are you sure you want to delete this notification?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await notificationService.deleteNotification(id);
-              setNotifications((prev) => prev.filter((n) => n.id !== id));
-            } catch (err) {
-              console.error('Error deleting notification:', err);
-              Alert.alert('Error', 'Failed to delete notification');
-            }
-          },
+    Alert.alert('Delete Notification', 'Are you sure you want to delete this notification?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await notificationService.deleteNotification(id);
+            setNotifications((prev) => prev.filter((n) => n.id !== id));
+          } catch (err) {
+            console.error('Error deleting notification:', err);
+            Alert.alert('Error', 'Failed to delete notification');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleNotificationPress = async (notification: Notification) => {
     if (!notification.read) {
       await handleMarkAsRead(notification.id);
     }
-    
+
     if (notification.actionUrl) {
       router.push(notification.actionUrl as any);
     }
@@ -150,7 +147,7 @@ export default function NotificationsScreen() {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 1) {
       const minutes = Math.floor(diffInHours * 60);
       return `${minutes}m ago`;
@@ -170,14 +167,16 @@ export default function NotificationsScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.notificationContent}>
-        <View style={[styles.iconContainer, { backgroundColor: notificationColors[item.type] + '20' }]}>
+        <View
+          style={[styles.iconContainer, { backgroundColor: notificationColors[item.type] + '20' }]}
+        >
           <Ionicons
             name={notificationIcons[item.type] as any}
             size={24}
             color={notificationColors[item.type]}
           />
         </View>
-        
+
         <View style={styles.textContainer}>
           <View style={styles.titleRow}>
             <Text style={[styles.notificationTitle, !item.read && styles.unreadText]}>
@@ -191,7 +190,7 @@ export default function NotificationsScreen() {
           <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
         </View>
       </View>
-      
+
       <TouchableOpacity
         style={styles.deleteButton}
         onPress={() => handleDeleteNotification(item.id)}
@@ -211,7 +210,7 @@ export default function NotificationsScreen() {
       <Stack.Screen
         options={{
           title: 'Notifications',
-          headerRight: () => (
+          headerRight: () =>
             unreadCount > 0 && (
               <TouchableOpacity
                 style={styles.markAllButton}
@@ -224,18 +223,15 @@ export default function NotificationsScreen() {
                   <Text style={styles.markAllText}>Mark all read</Text>
                 )}
               </TouchableOpacity>
-            )
-          ),
+            ),
         }}
       />
-      
+
       {notifications.length === 0 && !error ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="notifications-off-outline" size={64} color={colors.textSecondary} />
           <Text style={styles.emptyTitle}>No notifications yet</Text>
-          <Text style={styles.emptyText}>
-            We'll notify you when something important happens
-          </Text>
+          <Text style={styles.emptyText}>We'll notify you when something important happens</Text>
         </View>
       ) : (
         <FlatList

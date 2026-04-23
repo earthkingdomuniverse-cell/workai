@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { colors, spacing, radius, typography } from '../../theme';
 import { dealService } from '../../src/services/dealService';
@@ -8,7 +17,7 @@ export default function DealPaymentScreen() {
   const { dealId, amount } = useLocalSearchParams();
   const [dealTitle, setDealTitle] = useState('');
   const [dealStatus, setDealStatus] = useState('');
-  const [paymentAmount, setPaymentAmount] = useState(amount as string || '');
+  const [paymentAmount, setPaymentAmount] = useState((amount as string) || '');
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
@@ -56,9 +65,7 @@ export default function DealPaymentScreen() {
     Alert.alert(
       'Payment Processing',
       `Processing payment of ${formatAmount(paymentAmount)} for deal ${dealId}`,
-      [
-        { text: 'OK', onPress: () => handlePaymentSubmit() }
-      ]
+      [{ text: 'OK', onPress: () => handlePaymentSubmit() }],
     );
   };
 
@@ -70,7 +77,9 @@ export default function DealPaymentScreen() {
         paymentMethodId: `pm_${last4}`,
       });
       setProcessing(false);
-      Alert.alert('Payment Successful', 'Your payment has been processed successfully!', [{ text: 'OK' }]);
+      Alert.alert('Payment Successful', 'Your payment has been processed successfully!', [
+        { text: 'OK' },
+      ]);
     } catch (_error) {
       setProcessing(false);
       setError('Failed to fund deal');
@@ -136,11 +145,15 @@ export default function DealPaymentScreen() {
         </View>
 
         <TouchableOpacity style={styles.payButton} onPress={handlePayment}>
-          {processing ? <ActivityIndicator color={colors.white} /> : <Text style={styles.payButtonText}>Process Payment</Text>}
+          {processing ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.payButtonText}>Process Payment</Text>
+          )}
         </TouchableOpacity>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

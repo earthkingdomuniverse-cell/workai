@@ -19,9 +19,9 @@ export default function AdminReviewsScreen() {
     try {
       setError(null);
       const data = await reviewService.getReviews({});
-      // For admin, show reviews that might need moderation (e.g., pending status or reported)
-      const pendingReviews = data.filter((r) => r.status === 'pending' || r.reported === true);
-      setItems(pendingReviews);
+      // Review records do not expose moderation status yet, so use reported reviews as queue.
+      const flaggedReviews = data.filter((r) => r.reported === true);
+      setItems(flaggedReviews);
     } catch (_error) {
       setError('Failed to load review moderation queue');
     } finally {
@@ -69,7 +69,7 @@ export default function AdminReviewsScreen() {
           <Text style={styles.cardTitle}>Review {item.id}</Text>
           <Text style={styles.cardText}>Deal: {item.dealId}</Text>
           <Text style={styles.cardText}>Rating: {item.rating}/5</Text>
-          <Text style={styles.cardText}>Status: {item.status || 'pending'}</Text>
+          <Text style={styles.cardText}>Moderation: {item.reported ? 'reported' : 'normal'}</Text>
           <Text style={styles.cardText}>{item.comment}</Text>
           {item.reviewer && <Text style={styles.cardText}>By: {item.reviewer.displayName}</Text>}
         </View>

@@ -10,19 +10,20 @@ import { requestService } from '../../src/services/requestService';
 import { dealService } from '../../src/services/dealService';
 import { trustService } from '../../src/services/trustService';
 
-interface NextAction {
+type ActionItem = {
   id: string;
   type: string;
   title: string;
   description: string;
-  priority: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   cta: string;
   route: string;
   icon: string;
-}
+};
 
 export default function AiNextActionScreen() {
-  const [items, setItems] = useState<NextAction[]>([]);
+  const router = useRouter();
+  const [items, setItems] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function AiNextActionScreen() {
   const loadActions = async () => {
     try {
       setError(null);
-      const actions: NextAction[] = [];
+      const actions: ActionItem[] = [];
 
       // Fetch user data to generate personalized actions
       try {
@@ -146,7 +147,13 @@ export default function AiNextActionScreen() {
       {items.length === 0 ? (
         <EmptyState title="No actions right now" description="You are all caught up." icon="✅" />
       ) : (
-        items.map((item) => <NextActionCard key={item.id} action={item} onPress={() => {}} />)
+        items.map((item) => (
+          <NextActionCard
+            key={item.id}
+            action={item}
+            onPress={(action) => router.push(action.route as any)}
+          />
+        ))
       )}
     </ScrollView>
   );

@@ -1,21 +1,30 @@
-import React, { useEffect, Component } from 'react';
+import React, { useEffect, Component, ReactNode } from 'react';
 import { ActivityIndicator, View, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { theme } from '../theme';
 import { useAuthStore } from '../src/store/auth-store';
 
 // Error Boundary Component
-class ErrorBoundary extends Component {
-  constructor(props) {
+type ErrorBoundaryProps = {
+  children?: ReactNode;
+};
+
+type ErrorBoundaryState = {
+  hasError: boolean;
+  error: Error | null;
+};
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
   }
 
@@ -31,7 +40,7 @@ class ErrorBoundary extends Component {
             padding: 20,
           }}
         >
-          <Text style={{ fontSize: 24, color: theme.colors.error, marginBottom: 10 }}>
+          <Text style={{ fontSize: 24, color: theme.colors.error.main, marginBottom: 10 }}>
             ⚠️ Something went wrong
           </Text>
           <Text style={{ fontSize: 14, color: theme.colors.text.secondary, textAlign: 'center' }}>

@@ -1,25 +1,41 @@
-# Hướng dẫn đóng góp (Contributing to WorkAI)
+# Contributing to WorkAI
 
-Chào mừng bạn! Chúng tôi rất trân trọng sự đóng góp của bạn để WorkAI trở nên tốt hơn.
+WorkAI được tổ chức như một product workspace. Khi đóng góp, hãy ưu tiên tác động tới người dùng, độ an toàn vận hành và khả năng release liên tục, không chỉ riêng thay đổi code.
 
-## Quy trình đóng góp
+## Quy trình
 
-1. **Fork** repo này.
-2. **Clone** repo về máy của bạn.
-3. Tạo một **Branch** mới cho tính năng hoặc sửa lỗi: `git checkout -b feat/ten-tinh-nang`.
-4. Thực hiện các thay đổi và **Commit**: `git commit -m "feat: mo ta tinh nang"`.
-5. **Push** lên branch của bạn: `git push origin feat/ten-tinh-nang`.
-6. Tạo một **Pull Request** mới trên GitHub.
+1. Fork repo.
+2. Tạo branch theo chuẩn như `feat/request-priority-score` hoặc `fix/admin-risk-filter`.
+3. Thực hiện thay đổi với phạm vi rõ ràng theo một product area.
+4. Chạy các kiểm tra phù hợp trước khi mở PR.
+5. Mở Pull Request và điền đầy đủ template.
 
-## Tiêu chuẩn Code
+## Product areas
 
-- Sử dụng `npm run lint` để kiểm tra lỗi style.
-- Luôn viết Unit Test cho các tính năng mới (`npm test`).
-- Đảm bảo `npm run typecheck` không có lỗi.
-- Viết commit message theo chuẩn [Conventional Commits](https://www.conventionalcommits.org/).
+- `src/`: backend product logic và API contracts.
+- `mobile/`: mobile experience.
+- `.github/`: workflows, release, docs publishing, issue intake.
+- `docs/`: product portal, roadmap, product-facing documentation.
 
-## Báo cáo lỗi
+## Definition of done
 
-Vui lòng sử dụng Issue Template có sẵn để báo cáo lỗi. Cung cấp đầy đủ thông tin về môi trường và các bước tái hiện lỗi.
+- Có lý do product rõ ràng: giải quyết bug, tăng trải nghiệm hoặc tăng năng lực vận hành.
+- Không phá vỡ luồng mock-first hiện có trừ khi thay đổi đó được yêu cầu rõ ràng.
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test:coverage`
+- Nếu sửa `mobile/`: kiểm tra thủ công các màn hình và flow bị ảnh hưởng trước khi mở PR.
+- Cập nhật docs nếu thay đổi tác động tới API, luồng người dùng hoặc vận hành repo.
 
-Cảm ơn bạn! ❤️
+## Commit and PR standards
+
+- Dùng [Conventional Commits](https://www.conventionalcommits.org/).
+- PR nên gói theo một outcome, không gom nhiều ý tưởng rời rạc.
+- Nếu là feature, hãy nói rõ user segment hưởng lợi và chỉ số kỳ vọng cải thiện.
+- Nếu là bug fix, hãy mô tả tác động thực tế và cách tái hiện.
+
+## Feedback channels
+
+- Bug report: dùng GitHub Issue form.
+- Feature proposal: dùng GitHub Issue form theo hướng product feedback.
+- Security issue: không đăng công khai, dùng flow trong [SECURITY.md](SECURITY.md).

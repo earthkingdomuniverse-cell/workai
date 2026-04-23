@@ -31,7 +31,7 @@ interface ReceiptCardProps {
   onPress?: () => void;
 }
 
-export const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt }) => {
+export const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt, onPress }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':

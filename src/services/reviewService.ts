@@ -1,11 +1,7 @@
 import { Review, ReviewAggregate, CreateReviewInput, ReviewFilter } from '../types/review';
 import { mockReviews } from '../mocks/reviews';
 import { AppError } from '../lib/errors';
-
-const releasedDealIds = new Set(['deal_4']);
-const releasedDealParticipants: Record<string, string[]> = {
-  deal_4: ['user_1', 'user_4'],
-};
+import { liveMockDeals } from '../routes/deals';
 
 export interface ReviewService {
   createReview(
@@ -191,10 +187,13 @@ class ReviewServiceImpl implements ReviewService {
     mockReviews.splice(index, 1);
   }
 
-  async canSubmitReview(_dealId: string, _reviewerId: string): Promise<boolean> {
-    if (!releasedDealIds.has(_dealId)) return false;
-    const participants = releasedDealParticipants[_dealId] || [];
-    return participants.includes(_reviewerId);
+  async canSubmitReview(dealId: string, reviewerId: string): Promise<boolean> {
+    const deal = liveMockDeals.find((item) => item.id === dealId);
+    if (!deal || deal.status !== 'released') {
+      return false;
+    }
+
+    return [deal.clientId, deal.providerId].includes(reviewerId);
   }
 }
 

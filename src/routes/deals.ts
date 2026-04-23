@@ -4,7 +4,14 @@ import { authenticate } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { mockReceipts, mockTransactions } from '../mocks/transactions';
 
-type DealStatus = 'created' | 'funded' | 'submitted' | 'released' | 'disputed' | 'refunded' | 'under_review';
+type DealStatus =
+  | 'created'
+  | 'funded'
+  | 'submitted'
+  | 'released'
+  | 'disputed'
+  | 'refunded'
+  | 'under_review';
 
 type LocalDeal = {
   id: string;
@@ -55,7 +62,7 @@ type LocalDeal = {
   updatedAt: string;
 };
 
-const mockDeals: LocalDeal[] = [
+export const liveMockDeals: LocalDeal[] = [
   {
     id: 'deal_1',
     offerId: 'offer_1',
@@ -63,18 +70,40 @@ const mockDeals: LocalDeal[] = [
     clientId: 'user_2',
     status: 'created',
     title: 'E-commerce Website Development',
-    description: 'Build a complete e-commerce website with payment integration and inventory management.',
+    description:
+      'Build a complete e-commerce website with payment integration and inventory management.',
     amount: 12000,
     currency: 'USD',
     fundedAmount: 0,
     releasedAmount: 0,
     serviceFee: 600,
     milestones: [
-      { id: 'milestone_1', title: 'Project Setup & Design', amount: 3000, status: 'pending', dueDate: '2024-06-15T00:00:00Z' },
-      { id: 'milestone_2', title: 'Frontend Development', amount: 4000, status: 'pending', dueDate: '2024-07-15T00:00:00Z' },
+      {
+        id: 'milestone_1',
+        title: 'Project Setup & Design',
+        amount: 3000,
+        status: 'pending',
+        dueDate: '2024-06-15T00:00:00Z',
+      },
+      {
+        id: 'milestone_2',
+        title: 'Frontend Development',
+        amount: 4000,
+        status: 'pending',
+        dueDate: '2024-07-15T00:00:00Z',
+      },
     ],
     timeline: [
-      { id: 'timeline_1', type: 'status_change', title: 'Deal Created', status: 'created', userId: 'user_2', userName: 'Client', createdAt: '2024-05-01T10:00:00Z', updatedAt: '2024-05-01T10:00:00Z' },
+      {
+        id: 'timeline_1',
+        type: 'status_change',
+        title: 'Deal Created',
+        status: 'created',
+        userId: 'user_2',
+        userName: 'Client',
+        createdAt: '2024-05-01T10:00:00Z',
+        updatedAt: '2024-05-01T10:00:00Z',
+      },
     ],
     views: 45,
     createdAt: '2024-05-01T10:00:00Z',
@@ -94,12 +123,37 @@ const mockDeals: LocalDeal[] = [
     releasedAmount: 0,
     serviceFee: 125,
     milestones: [
-      { id: 'milestone_5', title: 'Wireframes & Mockups', amount: 1500, status: 'completed', completedAt: '2024-05-18T10:00:00Z' },
+      {
+        id: 'milestone_5',
+        title: 'Wireframes & Mockups',
+        amount: 1500,
+        status: 'completed',
+        completedAt: '2024-05-18T10:00:00Z',
+      },
       { id: 'milestone_6', title: 'Final Design & Assets', amount: 1000, status: 'pending' },
     ],
     timeline: [
-      { id: 'timeline_2', type: 'status_change', title: 'Deal Created', status: 'created', userId: 'user_1', userName: 'Client', createdAt: '2024-05-05T10:00:00Z', updatedAt: '2024-05-05T10:00:00Z' },
-      { id: 'timeline_3', type: 'payment', title: 'Deal Funded', description: 'Funded $2500 of $2500', amount: 2500, userId: 'user_1', userName: 'Client', createdAt: '2024-05-06T10:00:00Z', updatedAt: '2024-05-06T10:00:00Z' },
+      {
+        id: 'timeline_2',
+        type: 'status_change',
+        title: 'Deal Created',
+        status: 'created',
+        userId: 'user_1',
+        userName: 'Client',
+        createdAt: '2024-05-05T10:00:00Z',
+        updatedAt: '2024-05-05T10:00:00Z',
+      },
+      {
+        id: 'timeline_3',
+        type: 'payment',
+        title: 'Deal Funded',
+        description: 'Funded $2500 of $2500',
+        amount: 2500,
+        userId: 'user_1',
+        userName: 'Client',
+        createdAt: '2024-05-06T10:00:00Z',
+        updatedAt: '2024-05-06T10:00:00Z',
+      },
     ],
     views: 32,
     createdAt: '2024-05-05T10:00:00Z',
@@ -119,13 +173,53 @@ const mockDeals: LocalDeal[] = [
     releasedAmount: 0,
     serviceFee: 75,
     milestones: [
-      { id: 'milestone_7', title: 'Initial Data Analysis', amount: 750, status: 'completed', completedAt: '2024-05-09T10:00:00Z' },
-      { id: 'milestone_8', title: 'Monthly Report', amount: 750, status: 'completed', completedAt: '2024-06-08T10:00:00Z' },
+      {
+        id: 'milestone_7',
+        title: 'Initial Data Analysis',
+        amount: 750,
+        status: 'completed',
+        completedAt: '2024-05-09T10:00:00Z',
+      },
+      {
+        id: 'milestone_8',
+        title: 'Monthly Report',
+        amount: 750,
+        status: 'completed',
+        completedAt: '2024-06-08T10:00:00Z',
+      },
     ],
     timeline: [
-      { id: 'timeline_4', type: 'status_change', title: 'Deal Created', status: 'created', userId: 'user_3', userName: 'Client', createdAt: '2024-04-25T10:00:00Z', updatedAt: '2024-04-25T10:00:00Z' },
-      { id: 'timeline_5', type: 'payment', title: 'Deal Funded', description: 'Funded $1500 of $1500', amount: 1500, userId: 'user_3', userName: 'Client', createdAt: '2024-04-26T10:00:00Z', updatedAt: '2024-04-26T10:00:00Z' },
-      { id: 'timeline_6', type: 'milestone_update', title: 'Work Submitted', description: 'All milestones completed', userId: 'user_2', userName: 'Provider', createdAt: '2024-06-08T10:00:00Z', updatedAt: '2024-06-08T10:00:00Z' },
+      {
+        id: 'timeline_4',
+        type: 'status_change',
+        title: 'Deal Created',
+        status: 'created',
+        userId: 'user_3',
+        userName: 'Client',
+        createdAt: '2024-04-25T10:00:00Z',
+        updatedAt: '2024-04-25T10:00:00Z',
+      },
+      {
+        id: 'timeline_5',
+        type: 'payment',
+        title: 'Deal Funded',
+        description: 'Funded $1500 of $1500',
+        amount: 1500,
+        userId: 'user_3',
+        userName: 'Client',
+        createdAt: '2024-04-26T10:00:00Z',
+        updatedAt: '2024-04-26T10:00:00Z',
+      },
+      {
+        id: 'timeline_6',
+        type: 'milestone_update',
+        title: 'Work Submitted',
+        description: 'All milestones completed',
+        userId: 'user_2',
+        userName: 'Provider',
+        createdAt: '2024-06-08T10:00:00Z',
+        updatedAt: '2024-06-08T10:00:00Z',
+      },
     ],
     views: 18,
     createdAt: '2024-04-25T10:00:00Z',
@@ -145,14 +239,64 @@ const mockDeals: LocalDeal[] = [
     releasedAmount: 800,
     serviceFee: 40,
     milestones: [
-      { id: 'milestone_9', title: 'First Batch of Articles', amount: 400, status: 'completed', completedAt: '2024-04-14T10:00:00Z' },
-      { id: 'milestone_10', title: 'Final Batch of Articles', amount: 400, status: 'completed', completedAt: '2024-05-14T10:00:00Z' },
+      {
+        id: 'milestone_9',
+        title: 'First Batch of Articles',
+        amount: 400,
+        status: 'completed',
+        completedAt: '2024-04-14T10:00:00Z',
+      },
+      {
+        id: 'milestone_10',
+        title: 'Final Batch of Articles',
+        amount: 400,
+        status: 'completed',
+        completedAt: '2024-05-14T10:00:00Z',
+      },
     ],
     timeline: [
-      { id: 'timeline_8', type: 'status_change', title: 'Deal Created', status: 'created', userId: 'user_1', userName: 'Client', createdAt: '2024-04-01T10:00:00Z', updatedAt: '2024-04-01T10:00:00Z' },
-      { id: 'timeline_9', type: 'payment', title: 'Deal Funded', description: 'Funded $800', amount: 800, userId: 'user_1', userName: 'Client', createdAt: '2024-04-02T10:00:00Z', updatedAt: '2024-04-02T10:00:00Z' },
-      { id: 'timeline_10', type: 'milestone_update', title: 'Work Submitted', description: 'All milestones completed', userId: 'user_4', userName: 'Provider', createdAt: '2024-05-14T10:00:00Z', updatedAt: '2024-05-14T10:00:00Z' },
-      { id: 'timeline_11', type: 'payment', title: 'Funds Released', description: 'Released $800', amount: 800, userId: 'user_1', userName: 'Client', createdAt: '2024-05-16T10:00:00Z', updatedAt: '2024-05-16T10:00:00Z' },
+      {
+        id: 'timeline_8',
+        type: 'status_change',
+        title: 'Deal Created',
+        status: 'created',
+        userId: 'user_1',
+        userName: 'Client',
+        createdAt: '2024-04-01T10:00:00Z',
+        updatedAt: '2024-04-01T10:00:00Z',
+      },
+      {
+        id: 'timeline_9',
+        type: 'payment',
+        title: 'Deal Funded',
+        description: 'Funded $800',
+        amount: 800,
+        userId: 'user_1',
+        userName: 'Client',
+        createdAt: '2024-04-02T10:00:00Z',
+        updatedAt: '2024-04-02T10:00:00Z',
+      },
+      {
+        id: 'timeline_10',
+        type: 'milestone_update',
+        title: 'Work Submitted',
+        description: 'All milestones completed',
+        userId: 'user_4',
+        userName: 'Provider',
+        createdAt: '2024-05-14T10:00:00Z',
+        updatedAt: '2024-05-14T10:00:00Z',
+      },
+      {
+        id: 'timeline_11',
+        type: 'payment',
+        title: 'Funds Released',
+        description: 'Released $800',
+        amount: 800,
+        userId: 'user_1',
+        userName: 'Client',
+        createdAt: '2024-05-16T10:00:00Z',
+        updatedAt: '2024-05-16T10:00:00Z',
+      },
     ],
     views: 22,
     createdAt: '2024-04-01T10:00:00Z',
@@ -161,7 +305,7 @@ const mockDeals: LocalDeal[] = [
 ];
 
 function getDeal(id: string): LocalDeal | undefined {
-  return mockDeals.find((item) => item.id === id);
+  return liveMockDeals.find((item) => item.id === id);
 }
 
 function pushTimeline(
@@ -176,7 +320,13 @@ function pushTimeline(
   });
 }
 
-function createTransactionAndReceipt(deal: LocalDeal, type: 'fund' | 'release', amount: number, userId: string, userName: string) {
+function createTransactionAndReceipt(
+  deal: LocalDeal,
+  type: 'fund' | 'release',
+  amount: number,
+  userId: string,
+  userName: string,
+) {
   const transactionId = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const receiptId = `rcpt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -224,7 +374,10 @@ function createTransactionAndReceipt(deal: LocalDeal, type: 'fund' | 'release', 
 async function requireDealUser(request: any, reply: any) {
   const user = await authenticate(request, reply);
   if (!user || user.userId === 'guest_user') {
-    throw new AppError('Authentication required', { code: 'AUTHENTICATION_ERROR', statusCode: 401 });
+    throw new AppError('Authentication required', {
+      code: 'AUTHENTICATION_ERROR',
+      statusCode: 401,
+    });
   }
   return user;
 }
@@ -241,7 +394,7 @@ function ensureTransition(current: DealStatus, next: DealStatus, allowed: DealSt
 const deals: FastifyPluginAsync = async (fastify) => {
   fastify.get('/deals', async (request, reply) => {
     const query = request.query as Record<string, string | undefined>;
-    let items = [...mockDeals];
+    let items = [...liveMockDeals];
 
     if (query.status) items = items.filter((item) => item.status === query.status);
     if (query.providerId) items = items.filter((item) => item.providerId === query.providerId);
@@ -254,10 +407,16 @@ const deals: FastifyPluginAsync = async (fastify) => {
     const user = await requireDealUser(request, reply);
     const body = request.body as Record<string, any>;
     if (!body.title || String(body.title).trim().length < 5) {
-      throw new AppError('Title must be at least 5 characters', { code: 'VALIDATION_ERROR', statusCode: 400 });
+      throw new AppError('Title must be at least 5 characters', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
     }
     if (!body.description || String(body.description).trim().length < 20) {
-      throw new AppError('Description must be at least 20 characters', { code: 'VALIDATION_ERROR', statusCode: 400 });
+      throw new AppError('Description must be at least 20 characters', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
     }
     if (!body.amount || Number(body.amount) <= 0) {
       throw new AppError('Amount must be positive', { code: 'VALIDATION_ERROR', statusCode: 400 });
@@ -285,8 +444,14 @@ const deals: FastifyPluginAsync = async (fastify) => {
       updatedAt: new Date().toISOString(),
     };
 
-    pushTimeline(deal, { type: 'status_change', title: 'Deal Created', status: 'created', userId: user.userId, userName: 'Client' });
-    mockDeals.push(deal);
+    pushTimeline(deal, {
+      type: 'status_change',
+      title: 'Deal Created',
+      status: 'created',
+      userId: user.userId,
+      userName: 'Client',
+    });
+    liveMockDeals.push(deal);
     return createdResponse(reply, deal);
   });
 
@@ -304,19 +469,33 @@ const deals: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const body = request.body as { amount?: number; paymentMethodId?: string };
     const deal = getDeal(id);
-    if (!deal) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
+    if (!deal)
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
     if (deal.clientId !== user.userId) {
-      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only the client can fund this deal' } });
+      return reply
+        .status(403)
+        .send({ error: { code: 'FORBIDDEN', message: 'Only the client can fund this deal' } });
     }
     if (!body.amount || body.amount <= 0 || !body.paymentMethodId) {
-      throw new AppError('amount and paymentMethodId are required', { code: 'VALIDATION_ERROR', statusCode: 400 });
+      throw new AppError('amount and paymentMethodId are required', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
     }
     ensureTransition(deal.status, 'funded', ['created']);
     deal.status = 'funded';
     deal.fundedAmount = Math.min(body.amount, deal.amount);
     deal.updatedAt = new Date().toISOString();
     createTransactionAndReceipt(deal, 'fund', deal.fundedAmount, user.userId, 'Client');
-    pushTimeline(deal, { type: 'payment', title: 'Deal Funded', description: `Funded $${deal.fundedAmount}`, amount: deal.fundedAmount, status: 'funded', userId: user.userId, userName: 'Client' });
+    pushTimeline(deal, {
+      type: 'payment',
+      title: 'Deal Funded',
+      description: `Funded $${deal.fundedAmount}`,
+      amount: deal.fundedAmount,
+      status: 'funded',
+      userId: user.userId,
+      userName: 'Client',
+    });
     return successResponse(reply, deal);
   });
 
@@ -325,9 +504,12 @@ const deals: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const body = request.body as { milestoneId?: string; notes?: string };
     const deal = getDeal(id);
-    if (!deal) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
+    if (!deal)
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
     if (deal.providerId !== user.userId) {
-      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only the provider can submit work' } });
+      return reply
+        .status(403)
+        .send({ error: { code: 'FORBIDDEN', message: 'Only the provider can submit work' } });
     }
     ensureTransition(deal.status, 'submitted', ['funded']);
 
@@ -342,7 +524,15 @@ const deals: FastifyPluginAsync = async (fastify) => {
 
     deal.status = 'submitted';
     deal.updatedAt = new Date().toISOString();
-    pushTimeline(deal, { type: 'milestone_update', title: 'Work Submitted', description: body.notes || 'Work submitted for review', status: 'submitted', milestoneId: body.milestoneId, userId: user.userId, userName: 'Provider' });
+    pushTimeline(deal, {
+      type: 'milestone_update',
+      title: 'Work Submitted',
+      description: body.notes || 'Work submitted for review',
+      status: 'submitted',
+      milestoneId: body.milestoneId,
+      userId: user.userId,
+      userName: 'Provider',
+    });
     return successResponse(reply, deal);
   });
 
@@ -351,17 +541,29 @@ const deals: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const body = request.body as { amount?: number; notes?: string };
     const deal = getDeal(id);
-    if (!deal) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
+    if (!deal)
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
     if (deal.clientId !== user.userId) {
-      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only the client can release funds' } });
+      return reply
+        .status(403)
+        .send({ error: { code: 'FORBIDDEN', message: 'Only the client can release funds' } });
     }
     ensureTransition(deal.status, 'released', ['submitted']);
-    const amount = body.amount && body.amount > 0 ? Math.min(body.amount, deal.amount) : deal.amount;
+    const amount =
+      body.amount && body.amount > 0 ? Math.min(body.amount, deal.amount) : deal.amount;
     deal.releasedAmount = amount;
     deal.status = 'released';
     deal.updatedAt = new Date().toISOString();
     createTransactionAndReceipt(deal, 'release', amount, user.userId, 'Client');
-    pushTimeline(deal, { type: 'payment', title: 'Funds Released', description: body.notes || `Released $${amount}`, amount, status: 'released', userId: user.userId, userName: 'Client' });
+    pushTimeline(deal, {
+      type: 'payment',
+      title: 'Funds Released',
+      description: body.notes || `Released $${amount}`,
+      amount,
+      status: 'released',
+      userId: user.userId,
+      userName: 'Client',
+    });
     return successResponse(reply, deal);
   });
 
@@ -370,18 +572,37 @@ const deals: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string };
     const body = request.body as { reason?: string; description?: string };
     const deal = getDeal(id);
-    if (!deal) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
+    if (!deal)
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
     if (![deal.clientId, deal.providerId].includes(user.userId)) {
-      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only deal participants can dispute' } });
+      return reply
+        .status(403)
+        .send({ error: { code: 'FORBIDDEN', message: 'Only deal participants can dispute' } });
     }
     ensureTransition(deal.status, 'disputed', ['funded', 'submitted', 'released']);
     if (!body.reason || !body.description) {
-      throw new AppError('reason and description are required', { code: 'VALIDATION_ERROR', statusCode: 400 });
+      throw new AppError('reason and description are required', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
     }
     deal.status = 'disputed';
-    deal.dispute = { id: `dispute_${Date.now()}`, reason: body.reason, description: body.description, status: 'open', createdAt: new Date().toISOString() };
+    deal.dispute = {
+      id: `dispute_${Date.now()}`,
+      reason: body.reason,
+      description: body.description,
+      status: 'open',
+      createdAt: new Date().toISOString(),
+    };
     deal.updatedAt = new Date().toISOString();
-    pushTimeline(deal, { type: 'dispute', title: 'Dispute Opened', description: body.reason, status: 'disputed', userId: user.userId, userName: user.userId === deal.clientId ? 'Client' : 'Provider' });
+    pushTimeline(deal, {
+      type: 'dispute',
+      title: 'Dispute Opened',
+      description: body.reason,
+      status: 'disputed',
+      userId: user.userId,
+      userName: user.userId === deal.clientId ? 'Client' : 'Provider',
+    });
     return successResponse(reply, deal);
   });
 };

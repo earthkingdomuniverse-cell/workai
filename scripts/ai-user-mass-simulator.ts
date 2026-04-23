@@ -58,14 +58,28 @@ async function createUserFast(): Promise<{ email: string; token: string; id: str
       password,
     }, { timeout: 5000 });
 
-    const token = loginRes.data?.data?.token || loginRes.data?.token;
-    const id = signupRes.data?.data?.id || signupRes.data?.id;
+    const token =
+      loginRes.data?.data?.token ||
+      loginRes.data?.token ||
+      loginRes.data?.accessToken;
+    const id =
+      signupRes.data?.data?.user?.id ||
+      signupRes.data?.data?.id ||
+      signupRes.data?.id;
 
     if (token && id) {
       createdUsers.push({ email, token, id });
       stats.usersCreated++;
       return { email, token, id };
     }
+
+    log(
+      'ERROR',
+      `Create user returned unexpected response shape for ${email}: ${JSON.stringify({
+        signup: signupRes.data,
+        login: loginRes.data,
+      })}`,
+    );
     return null;
   } catch (error: any) {
     stats.usersFailed++;

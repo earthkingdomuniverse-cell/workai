@@ -31,9 +31,11 @@ export default function OfferDetailScreen() {
         const data = await offerService.getOffer(id as string);
 
         // Try to fetch provider trust profile
-        let trust = null;
+        let trust: TrustProfile | null = null;
         try {
-          trust = await trustService.getTrustProfile(data.providerId || data.provider?.id);
+          if (data.providerId) {
+            trust = await trustService.getTrustProfile(data.providerId);
+          }
         } catch (e) {
           // Trust not found, will use fallback
         }
@@ -43,7 +45,8 @@ export default function OfferDetailScreen() {
           provider: {
             ...data.provider,
             trustScore: trust?.trustScore ?? data.provider?.trustScore ?? null,
-            verificationLevel: trust?.verificationLevel ?? data.provider?.verificationLevel ?? null,
+            verificationLevel:
+              trust?.verificationLevel ?? data.provider?.verificationLevel ?? null,
             completedDeals: trust?.completedDeals ?? data.provider?.completedDeals ?? null,
           },
         });

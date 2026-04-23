@@ -1,5 +1,8 @@
 name: 🐛 Bug Report
 description: Report a bug to help us improve WorkAI
+title: '[Bug] '
+labels:
+  - bug
 body:
   - type: markdown
     attributes:
@@ -28,6 +31,18 @@ body:
     attributes:
       label: Hành vi mong đợi
       description: Mô tả những gì bạn mong đợi sẽ xảy ra.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Khu vực sản phẩm bị ảnh hưởng
+      options:
+        - Backend API
+        - Mobile app
+        - AI flow
+        - Trust / Admin
+        - GitHub automation / Docs
     validations:
       required: true
   - type: input

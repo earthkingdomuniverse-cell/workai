@@ -19,22 +19,22 @@ export default function AdminOverviewScreen() {
   const loadOverview = async () => {
     try {
       setError(null);
-      
+
       // Fetch real data from existing services
       const [deals, offers, requests] = await Promise.all([
         dealService.getDeals(),
         offerService.getOffers({}),
         requestService.getRequests({}),
       ]);
-      
+
       // Calculate stats
       const totalDeals = deals.length;
       const activeDeals = deals.filter((d: any) => d.status === 'in_progress').length;
       const totalOffers = offers.length;
       const totalRequests = requests.length;
-      
+
       // Mock additional stats (would need user service for real count)
-      setStats({ 
+      setStats({
         totalUsers: 1247, // Would need userService
         totalDeals,
         activeDeals,
@@ -72,11 +72,29 @@ export default function AdminOverviewScreen() {
   }
 
   if (!stats) {
-    return <EmptyState title="No overview data" description="Admin summary is currently unavailable." icon="📊" />;
+    return (
+      <EmptyState
+        title="No overview data"
+        description="Admin summary is currently unavailable."
+        icon="📊"
+      />
+    );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadOverview(); }} />}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            loadOverview();
+          }}
+        />
+      }
+    >
       <Text style={styles.title}>Admin Dashboard</Text>
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
@@ -110,27 +128,27 @@ export default function AdminOverviewScreen() {
       </View>
     </ScrollView>
   );
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.activeDisputes}</Text>
-          <Text style={styles.statLabel}>Active Disputes</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.pendingReviews}</Text>
-          <Text style={styles.statLabel}>Pending Reviews</Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
   loading: { ...typography.body, color: colors.textSecondary },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  statCard: { width: '48%', backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.md },
+  statCard: {
+    width: '48%',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
   statValue: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   statLabel: { ...typography.body, color: colors.textSecondary },
 });
