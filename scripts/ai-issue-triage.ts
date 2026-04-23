@@ -45,8 +45,8 @@ async function main() {
   });
 
   const rawLabels = response.choices[0].message.content || 'needs-triage';
-  const labels = rawLabels.split(',').map(l => l.trim().toLowerCase());
-  
+  const labels = rawLabels.split(',').map((l) => l.trim().toLowerCase());
+
   // Save to a file for the GitHub Action to read
   fs.writeFileSync('ai-labels.txt', labels.join(','));
   console.log(`✅ AI Triage completed. Suggested labels: ${labels.join(', ')}`);

@@ -42,7 +42,7 @@ async function main() {
   });
 
   const review = response.choices[0].message.content;
-  
+
   // Save to a file for the GitHub Action to read
   fs.writeFileSync('ai-review.md', review || 'No feedback provided.');
   console.log('✅ AI Review completed.');

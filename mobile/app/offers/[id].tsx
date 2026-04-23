@@ -45,8 +45,7 @@ export default function OfferDetailScreen() {
           provider: {
             ...data.provider,
             trustScore: trust?.trustScore ?? data.provider?.trustScore ?? null,
-            verificationLevel:
-              trust?.verificationLevel ?? data.provider?.verificationLevel ?? null,
+            verificationLevel: trust?.verificationLevel ?? data.provider?.verificationLevel ?? null,
             completedDeals: trust?.completedDeals ?? data.provider?.completedDeals ?? null,
           },
         });
