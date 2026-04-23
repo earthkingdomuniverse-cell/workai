@@ -1,22 +1,32 @@
 # Configuration for PR Labeler
 
 backend:
-  - src/**/*
-  - package.json
-  - tsconfig.json
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/**/*
+          - package.json
+          - tsconfig.json
 
 mobile:
-  - mobile/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - mobile/**/*
 
 docs:
-  - "*.md"
-  - docs/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.md'
+          - docs/**/*
 
 ci:
-  - .github/workflows/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/workflows/**/*
 
 config:
-  - .env.example
-  - sonar-project.properties
-  - .gitignore
-  - Dockerfile
+  - changed-files:
+      - any-glob-to-any-file:
+          - .env.example
+          - sonar-project.properties
+          - .gitignore
+          - Dockerfile

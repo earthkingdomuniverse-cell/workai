@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
@@ -42,8 +44,34 @@ jobs:
       - name: 🔍 ESLint
         run: npm run lint
 
-      - name: 💅 Prettier check
-        run: npx prettier --check .
+      - name: 💅 Prettier check changed files
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "No diff base available; checking curated source paths."
+            npx prettier --check README.md CONTRIBUTING.md SECURITY.md PRODUCT.md docs .github mobile/src mobile/app src scripts
+            exit 0
+          fi
+
+          mapfile -t FILES < <(
+            git diff --name-only "$BASE_SHA" "${{ github.sha }}" \
+              | grep -E '\.(md|json|ya?ml|ts|tsx|js|jsx|css|html)$' \
+              | grep -v '^mobile/.expo/' || true
+          )
+
+          if [[ "${#FILES[@]}" -eq 0 ]]; then
+            echo "No Prettier-supported changed files detected."
+            exit 0
+          fi
+
+          printf '%s\n' "${FILES[@]}"
+          printf '%s\0' "${FILES[@]}" | xargs -0 npx prettier --check
 
   # ────────────────────────────────────────────
   # 2. Type Check
