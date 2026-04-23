@@ -1,0 +1,42 @@
+name: 🐛 Bug Report
+description: Report a bug to help us improve WorkAI
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã báo cáo lỗi! Vui lòng cung cấp càng nhiều thông tin càng tốt.
+  - type: textarea
+    id: description
+    attributes:
+      label: Mô tả lỗi
+      description: Mô tả rõ ràng và ngắn gọn về lỗi là gì.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Các bước tái hiện
+      description: Liệt kê các bước để tái hiện hành vi lỗi.
+      placeholder: |
+        1. Chạy 'npm run dev'
+        2. Truy cập vào '/api/v1/auth/login'
+        3. Nhập dữ liệu sai...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Hành vi mong đợi
+      description: Mô tả những gì bạn mong đợi sẽ xảy ra.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Phiên bản (Version)
+      description: Phiên bản Node.js hoặc commit hash.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs hoặc Screenshots
+      description: Dán logs từ terminal hoặc đính kèm ảnh minh họa.

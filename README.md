@@ -1,12 +1,18 @@
-# SkillValue AI
+# WorkAI Platform 🚀
 
-Backend + mobile workspace for SkillValue AI Official Product 1.0.
+WorkAI - The ultimate AI-powered marketplace platform.
 
-## Status
+## 📊 Status & Quality
 
-- Backend TypeScript build passes: `npm run typecheck` and `npm run build`
-- Backend currently runs in mock-first mode
-- Mobile source tree exists under `mobile/`, but this repo currently does not include a standalone `mobile/package.json`
+[![CI Pipeline](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/ci.yml/badge.svg)](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/codeql.yml/badge.svg)](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/codeql.yml)
+[![Docker Image](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/docker-ghcr.yml/badge.svg)](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/docker-ghcr.yml)
+
+- **Backend**: TypeScript build passes (`npm run build`).
+- **CI/CD**: Tự động hóa qua GitHub Actions (Lint, Test, Build, Deploy).
+- **Docker**: Hỗ trợ Containerization, sẵn sàng cho production.
+- **Security**: Tự động quét bảo mật bằng GitHub CodeQL.
+- **Dependency**: Quản lý tự động bằng Dependabot.
 
 ## Install
 
