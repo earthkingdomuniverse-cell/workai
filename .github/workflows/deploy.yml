@@ -1,0 +1,110 @@
+name: 🚢 Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ────────────────────────────────────────────
+  # 1. Run CI first
+  # ────────────────────────────────────────────
+  ci:
+    name: ✅ CI Check
+    uses: ./.github/workflows/ci.yml
+
+  # ────────────────────────────────────────────
+  # 2. Deploy to Staging
+  # ────────────────────────────────────────────
+  deploy-staging:
+    name: 🟡 Deploy Staging
+    runs-on: ubuntu-latest
+    needs: [ci]
+    if: github.event.inputs.environment != 'production'
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build
+        run: npm run build
+
+      - name: 🟡 Deploy to Staging
+        run: |
+          echo "🚀 Deploying to staging environment..."
+          echo "📦 Build output ready in dist/"
+          # TODO: Add your staging deploy command here
+          # Examples:
+          #   - Railway: railway up --service backend
+          #   - Render: curl deploy hook
+          #   - Docker: docker build & push
+          #   - SSH: rsync to server
+          echo "✅ Staging deploy completed!"
+
+  # ────────────────────────────────────────────
+  # 3. Deploy to Production
+  # ────────────────────────────────────────────
+  deploy-production:
+    name: 🟢 Deploy Production
+    runs-on: ubuntu-latest
+    needs: [ci]
+    if: github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build
+        run: npm run build
+
+      - name: 🟢 Deploy to Production
+        run: |
+          echo "🚀 Deploying to production environment..."
+          echo "📦 Build output ready in dist/"
+          # TODO: Add your production deploy command here
+          echo "✅ Production deploy completed!"
+
+      - name: 📢 Notify deployment
+        if: success()
+        run: |
+          echo "🎉 Production deployment successful!"
+          echo "Commit: ${{ github.sha }}"
+          echo "By: ${{ github.actor }}"

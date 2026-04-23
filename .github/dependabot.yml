@@ -1,0 +1,73 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Backend (root)
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Asia/Ho_Chi_Minh'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'backend'
+    commit-message:
+      prefix: 'chore(deps):'
+    groups:
+      typescript:
+        patterns:
+          - 'typescript'
+          - '@typescript-eslint/*'
+          - '@types/*'
+      fastify:
+        patterns:
+          - 'fastify'
+          - '@fastify/*'
+      testing:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+      linting:
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - 'prettier'
+
+  # Mobile (Expo)
+  - package-ecosystem: 'npm'
+    directory: '/mobile'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Asia/Ho_Chi_Minh'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'mobile'
+    commit-message:
+      prefix: 'chore(mobile-deps):'
+    groups:
+      expo:
+        patterns:
+          - 'expo'
+          - 'expo-*'
+      react-native:
+        patterns:
+          - 'react-native'
+          - 'react-native-*'
+
+  # GitHub Actions
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    labels:
+      - 'dependencies'
+      - 'ci'
+    commit-message:
+      prefix: 'chore(ci):'
