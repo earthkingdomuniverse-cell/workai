@@ -1,0 +1,33 @@
+name: 👋 PR Greeting
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  greeting:
+    name: 👋 Welcome Contributor
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: 👋 Post Welcome Message
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### 👋 Chào mừng bạn đến với WorkAI!
+            
+            Cảm ơn bạn đã tạo Pull Request này. Đội ngũ phát triển sẽ sớm xem xét các thay đổi của bạn.
+
+            Trong lúc chờ đợi, hãy đảm bảo:
+            - [ ] Code của bạn đã vượt qua các bước kiểm tra CI (Lint, Tests).
+            - [ ] Bạn đã cập nhật tài liệu (nếu có thay đổi API).
+            - [ ] Các commit message tuân thủ định dạng (feat:, fix:, chore:, ...).
+
+            Chúc bạn một ngày làm việc hiệu quả! 🚀`
+            })

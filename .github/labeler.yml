@@ -1,0 +1,22 @@
+# Configuration for PR Labeler
+
+backend:
+  - src/**/*
+  - package.json
+  - tsconfig.json
+
+mobile:
+  - mobile/**/*
+
+docs:
+  - "*.md"
+  - docs/**/*
+
+ci:
+  - .github/workflows/**/*
+
+config:
+  - .env.example
+  - sonar-project.properties
+  - .gitignore
+  - Dockerfile
