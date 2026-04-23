@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "SkillValue AI",
+    "slug": "skillvalue-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router", "expo-font"],
+    "scheme": "skillvalue-ai",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
