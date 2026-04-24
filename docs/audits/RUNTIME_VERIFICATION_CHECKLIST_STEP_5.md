@@ -23,6 +23,8 @@ Recent hardening included:
 - Mobile login/signup UI has been implemented.
 - Public onboarding no longer allows users to self-select `operator` or `admin` roles.
 - Mobile admin overview now calls backend `/admin/overview` through `adminService`.
+- Mobile admin overview now links to Disputes, Risk, Fraud, and Reviews operator tools.
+- Mobile admin disputes, risk, fraud, and reviews screens now use `adminService` instead of mock/local calculations.
 - Backend admin routes now use normalized `{ data, meta }` response shape.
 - Backend notification routes have been added and registered.
 - Notification persistence has been added through Prisma `Notification` and `NotificationPreference` models.
@@ -641,7 +643,44 @@ Expected:
 
 ---
 
-# Phase 11 - AI smoke test
+# Phase 11 - Admin smoke test
+
+## 1. Admin overview
+
+```bash
+curl http://localhost:3000/api/v1/admin/overview \
+  -H "Authorization: Bearer <OPERATOR_OR_ADMIN_TOKEN>"
+```
+
+Expected:
+
+- returns normalized `{ data, meta }` response.
+- member token receives forbidden response.
+
+## 2. Admin tool endpoints
+
+```bash
+curl http://localhost:3000/api/v1/admin/disputes \
+  -H "Authorization: Bearer <OPERATOR_OR_ADMIN_TOKEN>"
+
+curl http://localhost:3000/api/v1/admin/risk \
+  -H "Authorization: Bearer <OPERATOR_OR_ADMIN_TOKEN>"
+
+curl http://localhost:3000/api/v1/admin/fraud \
+  -H "Authorization: Bearer <OPERATOR_OR_ADMIN_TOKEN>"
+
+curl http://localhost:3000/api/v1/admin/reviews \
+  -H "Authorization: Bearer <OPERATOR_OR_ADMIN_TOKEN>"
+```
+
+Expected:
+
+- each endpoint returns normalized `{ data, meta }` response.
+- member token receives forbidden response.
+
+---
+
+# Phase 12 - AI smoke test
 
 ## 1. AI next action
 
@@ -657,7 +696,7 @@ Expected:
 
 ---
 
-# Phase 12 - Withdraw smoke test
+# Phase 13 - Withdraw smoke test
 
 ## 1. Unauthenticated withdraw list should fail
 
@@ -682,7 +721,7 @@ Expected:
 
 ---
 
-# Phase 13 - Mobile static checks
+# Phase 14 - Mobile static checks
 
 ## 1. Install mobile dependencies
 
@@ -713,6 +752,8 @@ Known recent fixes to verify:
 - login/signup screens compile.
 - onboarding does not mutate system role.
 - admin overview imports and uses `adminService`.
+- admin overview links to disputes/risk/fraud/reviews.
+- admin disputes/risk/fraud/reviews screens import and use `adminService`.
 - Home imports and uses `aiService.nextAction()`.
 - AI Next Action screen imports and uses `aiService.nextAction()`.
 
@@ -729,7 +770,7 @@ Expected:
 
 ---
 
-# Phase 14 - Mobile runtime smoke test
+# Phase 15 - Mobile runtime smoke test
 
 ## Screens to open
 
@@ -756,6 +797,11 @@ Expected:
 21. Profile
 22. Admin as member
 23. Admin as operator/admin
+24. Admin Overview
+25. Admin Disputes
+26. Admin Risk
+27. Admin Fraud
+28. Admin Reviews
 
 ## Expected results
 
@@ -770,6 +816,9 @@ Expected:
 - Tabs render.
 - Member cannot access admin.
 - Operator/admin can access admin overview.
+- Admin overview displays operator tool links.
+- Operator tool links navigate to Disputes, Risk, Fraud, and Reviews screens.
+- Admin screens use backend admin API data, not mock/local calculations.
 - Deals tab does not fail due to `providerId=me` or `clientId=me`.
 
 ---
@@ -789,6 +838,9 @@ Expected:
 - Trust `/me` requires auth and returns real user profile.
 - Notifications require auth and return Prisma-backed rows.
 - Proposal/deal/review events create notifications for the correct recipient.
+- Admin endpoints require operator/admin and return normalized responses.
+- Admin mobile overview links to all operator tools.
+- Admin mobile operator tool screens load via `adminService`.
 - AI next-action returns `{ actions, summary }`.
 - Mobile TypeScript compiles.
 - Expo starts without syntax/import errors.
@@ -806,6 +858,6 @@ Expected:
 
 1. Run CI and patch any backend/mobile typecheck failures.
 2. Create/apply notification migration in real environments.
-3. Add full admin dispute/risk/fraud/review mobile screens using `adminService`.
-4. Add CI database migration validation.
-5. Add push/email delivery adapters behind the persisted notification system.
+3. Add CI database migration validation.
+4. Add push/email delivery adapters behind the persisted notification system.
+5. Add richer admin detail screens for individual user/deal/review investigation.
