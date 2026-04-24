@@ -1,10 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
 import { createdResponse, successResponse } from '../lib/response';
 import { authenticate } from '../lib/auth';
-import { mockReviews } from '../mocks/reviews';
 import { ReviewAggregate } from '../types/review';
 import { AppError } from '../lib/errors';
-import { reviewService } from '../services/reviewService';
+import { prisma } from '../lib/prisma';
 
 async function requireReviewUser(request: any, reply: any) {
   const user = await authenticate(request, reply);
@@ -14,100 +13,149 @@ async function requireReviewUser(request: any, reply: any) {
   return user;
 }
 
-const reviews: FastifyPluginAsync = async (fastify) => {
-  // GET /api/reviews - list all with optional filters
-  fastify.get('/reviews', async (request, reply) => {
-    const { subjectType, subjectId, reviewerId, rating } = request.query as any;
+function serializeReview(review: any, subjectType: 'user' | 'offer' = 'user') {
+  return {
+    id: review.id,
+    dealId: review.dealId,
+    reviewerId: review.reviewerId,
+    reviewerRole: review.deal?.clientId === review.reviewerId ? 'client' : 'provider',
+    subjectType,
+    subjectId: subjectType === 'offer' ? review.deal?.offerId : review.subjectId,
+    rating: review.rating,
+    comment: review.comment,
+    tags: [],
+    helpfulCount: 0,
+    reported: false,
+    status: review.status === 'published' ? 'approved' : review.status,
+    createdAt: review.createdAt?.toISOString?.() ?? review.createdAt,
+    updatedAt: review.createdAt?.toISOString?.() ?? review.createdAt,
+    reviewer: review.reviewer
+      ? {
+          id: review.reviewer.id,
+          email: review.reviewer.email,
+          trustScore: review.reviewer.trustScore,
+        }
+      : undefined,
+    subject: review.subject
+      ? {
+          id: review.subject.id,
+          email: review.subject.email,
+          trustScore: review.subject.trustScore,
+        }
+      : undefined,
+  };
+}
 
-    let filtered = [...mockReviews];
+function buildAggregate(
+  subjectType: 'user' | 'offer',
+  subjectId: string,
+  reviews: any[],
+): ReviewAggregate {
+  if (reviews.length === 0) {
+    return {
+      [subjectType === 'user' ? 'userId' : 'offerId']: subjectId,
+      averageRating: 0,
+      totalReviews: 0,
+      ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      tags: [],
+    } as ReviewAggregate;
+  }
 
-    if (subjectType) {
-      filtered = filtered.filter((item) => item.subjectType === subjectType);
-    }
-    if (subjectId) {
-      filtered = filtered.filter((item) => item.subjectId === subjectId);
-    }
-    if (reviewerId) {
-      filtered = filtered.filter((item) => item.reviewerId === reviewerId);
-    }
-    if (rating) {
-      filtered = filtered.filter((item) => item.rating === rating);
-    }
+  const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+  const averageRating = Math.round((totalRating / reviews.length) * 10) / 10;
+  const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
-    return successResponse(reply, { items: filtered, total: filtered.length });
+  reviews.forEach((review) => {
+    if (Object.prototype.hasOwnProperty.call(ratingDistribution, review.rating)) {
+      ratingDistribution[review.rating as keyof typeof ratingDistribution]++;
+    }
   });
 
-  // GET /api/reviews/aggregate/:subjectType/:subjectId
-  fastify.get('/reviews/aggregate/:subjectType/:subjectId', async (request, reply) => {
-    const { subjectType, subjectId } = request.params as { subjectType: string; subjectId: string };
+  return {
+    [subjectType === 'user' ? 'userId' : 'offerId']: subjectId,
+    averageRating,
+    totalReviews: reviews.length,
+    ratingDistribution,
+    tags: [],
+  } as ReviewAggregate;
+}
 
-    const filtered = mockReviews.filter(
-      (item) => item.subjectType === subjectType && item.subjectId === subjectId,
-    );
+const reviewInclude = {
+  reviewer: true,
+  subject: true,
+  deal: true,
+};
 
-    if (filtered.length === 0) {
-      return successResponse(reply, {
-        [subjectType === 'user' ? 'userId' : 'offerId']: subjectId,
-        averageRating: 0,
-        totalReviews: 0,
-        ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        tags: [],
-      } as ReviewAggregate);
+const reviews: FastifyPluginAsync = async (fastify) => {
+  fastify.get('/reviews', async (request, reply) => {
+    const { subjectType, subjectId, reviewerId, rating } = request.query as Record<string, string | undefined>;
+    const where: any = {};
+
+    if (reviewerId) where.reviewerId = reviewerId;
+    if (rating) where.rating = Number(rating);
+
+    if (subjectType === 'user' && subjectId) {
+      where.subjectId = subjectId;
     }
 
-    // Calculate average rating
-    const totalRating = filtered.reduce((sum, r) => sum + r.rating, 0);
-    const averageRating = Math.round((totalRating / filtered.length) * 10) / 10;
+    if (subjectType === 'offer' && subjectId) {
+      where.deal = { offerId: subjectId };
+    }
 
-    // Calculate distribution
-    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    filtered.forEach((r) => {
-      if (distribution.hasOwnProperty(r.rating)) {
-        distribution[r.rating as keyof typeof distribution]++;
-      }
+    const items = await prisma.review.findMany({
+      where,
+      include: reviewInclude,
+      orderBy: { createdAt: 'desc' },
     });
 
-    // Aggregate tags
-    const tagCounts = new Map<string, number>();
-    filtered.forEach((r) => {
-      r.tags?.forEach((tag) => {
-        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+    const resolvedSubjectType = subjectType === 'offer' ? 'offer' : 'user';
+    return successResponse(reply, {
+      items: items.map((item) => serializeReview(item, resolvedSubjectType)),
+      total: items.length,
+    });
+  });
+
+  fastify.get('/reviews/aggregate/:subjectType/:subjectId', async (request, reply) => {
+    const { subjectType, subjectId } = request.params as { subjectType: string; subjectId: string };
+    if (!['user', 'offer'].includes(subjectType)) {
+      throw new AppError('subjectType must be user or offer', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
       });
-    });
-    const tags = Array.from(tagCounts.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
+    }
 
-    const aggregate: ReviewAggregate = {
-      [subjectType === 'user' ? 'userId' : 'offerId']: subjectId,
-      averageRating,
-      totalReviews: filtered.length,
-      ratingDistribution: distribution,
-      tags,
-    };
+    const where = subjectType === 'offer'
+      ? { deal: { offerId: subjectId } }
+      : { subjectId };
 
-    return successResponse(reply, aggregate);
+    const items = await prisma.review.findMany({ where });
+    return successResponse(reply, buildAggregate(subjectType as 'user' | 'offer', subjectId, items));
   });
 
   fastify.get('/reviews/by-user/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const items = mockReviews.filter(
-      (item) => item.subjectType === 'user' && item.subjectId === id,
-    );
-    return successResponse(reply, { items, total: items.length });
+    const items = await prisma.review.findMany({
+      where: { subjectId: id },
+      include: reviewInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+    return successResponse(reply, { items: items.map((item) => serializeReview(item, 'user')), total: items.length });
   });
 
   fastify.get('/reviews/by-offer/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const items = mockReviews.filter(
-      (item) => item.subjectType === 'offer' && item.subjectId === id,
-    );
-    return successResponse(reply, { items, total: items.length });
+    const items = await prisma.review.findMany({
+      where: { deal: { offerId: id } },
+      include: reviewInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+    return successResponse(reply, { items: items.map((item) => serializeReview(item, 'offer')), total: items.length });
   });
 
   fastify.post('/reviews', async (request, reply) => {
     const user = await requireReviewUser(request, reply);
     const body = request.body as Record<string, any>;
+
     if (!body.dealId || !body.subjectType || !body.subjectId) {
       throw new AppError('dealId, subjectType and subjectId are required', {
         code: 'VALIDATION_ERROR',
@@ -115,19 +163,97 @@ const reviews: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const review = await reviewService.createReview(
-      {
-        dealId: body.dealId,
-        subjectType: body.subjectType,
-        subjectId: body.subjectId,
-        rating: Number(body.rating),
-        comment: String(body.comment || ''),
-        tags: Array.isArray(body.tags) ? body.tags : [],
+    const rating = Number(body.rating);
+    const comment = String(body.comment || '').trim();
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new AppError('Rating must be an integer between 1 and 5', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
+    }
+
+    if (comment.length < 10) {
+      throw new AppError('Comment must be at least 10 characters', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
+    }
+
+    const deal = await prisma.deal.findUnique({ where: { id: String(body.dealId) } });
+    if (!deal) {
+      throw new AppError('Deal not found', { code: 'NOT_FOUND', statusCode: 404 });
+    }
+
+    if (deal.status !== 'released') {
+      throw new AppError('Reviews can only be submitted after deal release', {
+        code: 'BAD_REQUEST',
+        statusCode: 400,
+      });
+    }
+
+    if (![deal.clientId, deal.providerId].includes(user.userId)) {
+      throw new AppError('Only deal participants can submit reviews', {
+        code: 'FORBIDDEN',
+        statusCode: 403,
+      });
+    }
+
+    let subjectId = String(body.subjectId);
+    let subjectType: 'user' | 'offer' = body.subjectType === 'offer' ? 'offer' : 'user';
+
+    if (subjectType === 'offer') {
+      if (!deal.offerId || deal.offerId !== body.subjectId) {
+        throw new AppError('Offer is not associated with this deal', {
+          code: 'BAD_REQUEST',
+          statusCode: 400,
+        });
+      }
+      subjectId = deal.providerId;
+    }
+
+    if (![deal.clientId, deal.providerId].includes(subjectId)) {
+      throw new AppError('Review subject must be a deal participant', {
+        code: 'BAD_REQUEST',
+        statusCode: 400,
+      });
+    }
+
+    if (subjectId === user.userId) {
+      throw new AppError('Cannot review yourself', {
+        code: 'BAD_REQUEST',
+        statusCode: 400,
+      });
+    }
+
+    const duplicate = await prisma.review.findFirst({
+      where: {
+        dealId: deal.id,
+        reviewerId: user.userId,
+        subjectId,
       },
-      user.userId,
-      body.reviewerRole || 'client',
-    );
-    return createdResponse(reply, review);
+    });
+
+    if (duplicate) {
+      throw new AppError('Review already submitted for this deal and subject', {
+        code: 'CONFLICT',
+        statusCode: 409,
+      });
+    }
+
+    const review = await prisma.review.create({
+      data: {
+        dealId: deal.id,
+        reviewerId: user.userId,
+        subjectId,
+        rating,
+        comment,
+        status: 'published',
+      },
+      include: reviewInclude,
+    });
+
+    return createdResponse(reply, serializeReview(review, subjectType));
   });
 };
 
