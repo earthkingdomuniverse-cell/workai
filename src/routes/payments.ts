@@ -4,10 +4,26 @@ import { prisma } from '../lib/prisma';
 import { getPaymentProvider } from '../services/payments';
 import { AppError } from '../lib/errors';
 import { walletService } from '../services/walletService';
+import { authenticate, AuthContext } from '../lib/auth';
 
 function verifyZaloMac(data: string, mac: string, key2: string): boolean {
   const calc = crypto.createHmac('sha256', key2).update(data).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(calc), Buffer.from(mac));
+}
+
+function isOperatorUser(user: AuthContext) {
+  return user.role === 'operator' || user.role === 'admin';
+}
+
+async function requirePaymentUser(request: any, reply: any): Promise<AuthContext> {
+  const user = await authenticate(request, reply);
+  if (!user || user.userId === 'guest_user') {
+    throw new AppError('Authentication required', {
+      code: 'AUTHENTICATION_ERROR',
+      statusCode: 401,
+    });
+  }
+  return user;
 }
 
 function parseEmbedData(raw: unknown): Record<string, any> {
@@ -48,6 +64,7 @@ async function writePaymentAuditLog(input: {
 
 const payments: FastifyPluginAsync = async (fastify) => {
   fastify.get('/payments/status', async (request, reply) => {
+    const user = await requirePaymentUser(request, reply);
     const query = request.query as Record<string, string | undefined>;
 
     if (!query.provider || !query.providerRef) {
@@ -71,6 +88,15 @@ const payments: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Payment not found' } });
     }
 
+    const canView = isOperatorUser(user)
+      || transaction.userId === user.userId
+      || transaction.deal?.clientId === user.userId
+      || transaction.deal?.providerId === user.userId;
+
+    if (!canView) {
+      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Cannot view this payment' } });
+    }
+
     return {
       provider: transaction.provider,
       providerRef: transaction.providerRef,
@@ -86,10 +112,11 @@ const payments: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/payments/zalopay/create', async (request, reply) => {
+    const user = await requirePaymentUser(request, reply);
     const body = request.body as any;
 
-    if (!body.dealId || !body.userId) {
-      throw new AppError('dealId and userId are required', {
+    if (!body.dealId) {
+      throw new AppError('dealId is required', {
         code: 'VALIDATION_ERROR',
         statusCode: 400,
       });
@@ -101,7 +128,7 @@ const payments: FastifyPluginAsync = async (fastify) => {
       throw new AppError('Deal not found', { code: 'NOT_FOUND', statusCode: 404 });
     }
 
-    if (deal.clientId !== body.userId) {
+    if (deal.clientId !== user.userId) {
       throw new AppError('Only the client can fund this deal', {
         code: 'FORBIDDEN',
         statusCode: 403,
@@ -121,18 +148,18 @@ const payments: FastifyPluginAsync = async (fastify) => {
 
     const result = await provider.createPayment({
       dealId: body.dealId,
-      userId: body.userId,
+      userId: user.userId,
       amount,
       currency: 'VND',
       description: body.description || `Top up wallet for deal ${deal.id}`,
       callbackUrl: process.env.ZALOPAY_CALLBACK_URL,
-      metadata: { dealId: body.dealId, userId: body.userId, purpose: 'wallet_topup' },
+      metadata: { dealId: body.dealId, userId: user.userId, purpose: 'wallet_topup' },
     });
 
     await prisma.transaction.create({
       data: {
         dealId: body.dealId,
-        userId: body.userId,
+        userId: user.userId,
         type: 'deposit',
         status: 'pending',
         amount,
