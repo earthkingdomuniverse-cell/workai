@@ -5,24 +5,51 @@ import { colors, spacing, typography } from '../../theme';
 import NextActionCard from '../../src/components/NextActionCard';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
+import { aiService, NextAction } from '../../src/services/aiService';
 import { offerService } from '../../src/services/offerService';
 import { requestService } from '../../src/services/requestService';
 import { dealService } from '../../src/services/dealService';
-import { trustService } from '../../src/services/trustService';
+import { proposalService } from '../../src/services/proposalService';
+import { useAuthStore } from '../../src/store/auth-store';
 
-interface NextAction {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  priority: string;
+type NextActionCardItem = NextAction & {
   cta: string;
-  route: string;
   icon: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+};
+
+function iconForAction(type: string) {
+  switch (type) {
+    case 'onboarding':
+      return '🚀';
+    case 'offer':
+      return '💼';
+    case 'request':
+      return '🔎';
+    case 'proposal':
+      return '✉️';
+    case 'deal':
+      return '🤝';
+    default:
+      return '✨';
+  }
+}
+
+function toCardItem(action: NextAction): NextActionCardItem {
+  return {
+    ...action,
+    priority: action.priority === 'low' || action.priority === 'medium' || action.priority === 'high'
+      ? action.priority
+      : 'medium',
+    cta: 'Continue',
+    icon: iconForAction(action.type),
+  };
 }
 
 export default function AiNextActionScreen() {
-  const [items, setItems] = useState<NextAction[]>([]);
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const [items, setItems] = useState<NextActionCardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,76 +57,30 @@ export default function AiNextActionScreen() {
   const loadActions = async () => {
     try {
       setError(null);
-      const actions: NextAction[] = [];
 
-      // Fetch user data to generate personalized actions
-      try {
-        const trust = await trustService.getMyTrustProfile();
+      const [offers, requests, deals, proposals] = await Promise.all([
+        offerService.getOffers({}),
+        requestService.getRequests({}),
+        dealService.getDeals(),
+        proposalService.getProposals({ limit: 5 }),
+      ]);
 
-        // Add action based on verification level
-        if (trust.verificationLevel === 'unverified') {
-          actions.push({
-            id: '1',
-            type: 'verify_identity',
-            title: 'Verify Your Identity',
-            description: 'Increase trust score by verifying your identity',
-            priority: 'high',
-            cta: 'Verify',
-            route: '/(tabs)/profile',
-            icon: '🆔',
-          });
-        }
+      const result = await aiService.nextAction({
+        context: {
+          role: user?.role || 'member',
+          onboardingCompleted: Boolean(user?.onboardingCompleted),
+          offersCount: offers.length,
+          requestsCount: requests.length,
+          dealsCount: deals.length,
+          proposalsCount: proposals.length,
+          hasOffer: offers.length > 0,
+          hasRequest: requests.length > 0,
+          hasDeal: deals.length > 0,
+          hasProposal: proposals.length > 0,
+        },
+      });
 
-        // Add action based on deals
-        const deals = await dealService.getDeals();
-        const hasPendingDeals = deals.some((d: any) => d.status === 'in_progress');
-        if (hasPendingDeals) {
-          actions.push({
-            id: '2',
-            type: 'complete_deal',
-            title: 'Complete Your Deal',
-            description: 'You have deals in progress',
-            priority: 'medium',
-            cta: 'View Deals',
-            route: '/(tabs)/deals',
-            icon: '💼',
-          });
-        }
-      } catch (e) {
-        // Trust not available, use defaults
-      }
-
-      // Add default actions
-      const offers = await offerService.getOffers({});
-      const requests = await requestService.getRequests({});
-
-      if (offers.length === 0) {
-        actions.push({
-          id: '3',
-          type: 'create_first_offer',
-          title: 'Create Your First Offer',
-          description: 'Showcase your skills to potential clients',
-          priority: 'medium',
-          cta: 'Create Offer',
-          route: '/offers/create',
-          icon: '💼',
-        });
-      }
-
-      if (requests.length > 0) {
-        actions.push({
-          id: '4',
-          type: 'send_proposal',
-          title: 'Send a Proposal',
-          description: 'Browse requests that match your skills',
-          priority: 'medium',
-          cta: 'Browse Requests',
-          route: '/(tabs)/requests',
-          icon: '✉️',
-        });
-      }
-
-      setItems(actions);
+      setItems(result.actions.map(toCardItem));
     } catch (_err) {
       setError('Failed to load next actions');
     } finally {
@@ -111,6 +92,12 @@ export default function AiNextActionScreen() {
   useEffect(() => {
     loadActions();
   }, []);
+
+  const handlePress = (action: NextActionCardItem) => {
+    if (action.route) {
+      router.push(action.route as any);
+    }
+  };
 
   if (loading) {
     return (
@@ -146,7 +133,7 @@ export default function AiNextActionScreen() {
       {items.length === 0 ? (
         <EmptyState title="No actions right now" description="You are all caught up." icon="✅" />
       ) : (
-        items.map((item) => <NextActionCard key={item.id} action={item} onPress={() => {}} />)
+        items.map((item) => <NextActionCard key={item.id} action={item} onPress={handlePress} />)
       )}
     </ScrollView>
   );
