@@ -2,12 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { createdResponse, successResponse } from '../lib/response';
 import { authenticate } from '../lib/auth';
 import { AppError } from '../lib/errors';
-import {
-  createRequest,
-  getRequestById,
-  getRequestsByRequesterId,
-  mockRequests,
-} from '../mocks/requests';
+import { prisma } from '../lib/prisma';
 
 function requireRequestUser(user: { userId: string }) {
   if (!user || user.userId === 'guest_user') {
@@ -18,44 +13,72 @@ function requireRequestUser(user: { userId: string }) {
   }
 }
 
+function serializeRequest(item: any) {
+  return {
+    ...item,
+    budget: {
+      min: item.budgetMin,
+      max: item.budgetMax,
+      currency: item.currency,
+    },
+    createdAt: item.createdAt?.toISOString?.() ?? item.createdAt,
+    updatedAt: item.updatedAt?.toISOString?.() ?? item.updatedAt,
+  };
+}
+
 const requests: FastifyPluginAsync = async (fastify) => {
   fastify.get('/requests', async (request, reply) => {
     const query = request.query as Record<string, string | undefined>;
-    let items = [...mockRequests];
+    const where: any = {};
 
     if (query.q) {
-      const q = query.q.toLowerCase();
-      items = items.filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
-      );
+      where.OR = [
+        { title: { contains: query.q, mode: 'insensitive' } },
+        { description: { contains: query.q, mode: 'insensitive' } },
+      ];
     }
 
     if (query.urgency && query.urgency !== 'all') {
-      items = items.filter((item: any) => item.urgency === query.urgency);
+      where.urgency = query.urgency;
     }
 
-    if (query.location && query.location !== 'all') {
-      items = items.filter((item) => item.location?.type === query.location);
+    if (query.category && query.category !== 'all') {
+      where.category = query.category;
     }
 
-    return successResponse(reply, { items, total: items.length });
+    if (query.status && query.status !== 'all') {
+      where.status = query.status;
+    }
+
+    const items = await prisma.workRequest.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return successResponse(reply, { items: items.map(serializeRequest), total: items.length });
   });
 
   fastify.get('/requests/mine', async (request, reply) => {
     const user = await authenticate(request, reply);
     requireRequestUser(user);
-    const items = getRequestsByRequesterId(user.userId);
-    return successResponse(reply, { items, total: items.length });
+
+    const items = await prisma.workRequest.findMany({
+      where: { requesterId: user.userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return successResponse(reply, { items: items.map(serializeRequest), total: items.length });
   });
 
   fastify.get('/requests/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const item = getRequestById(id);
+    const item = await prisma.workRequest.findUnique({ where: { id } });
+
     if (!item) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Request not found' } });
     }
-    return successResponse(reply, item);
+
+    return successResponse(reply, serializeRequest(item));
   });
 
   fastify.post('/requests', async (request, reply) => {
@@ -69,6 +92,7 @@ const requests: FastifyPluginAsync = async (fastify) => {
         statusCode: 400,
       });
     }
+
     if (!body.description || String(body.description).trim().length < 20) {
       throw new AppError('Description must be at least 20 characters', {
         code: 'VALIDATION_ERROR',
@@ -76,34 +100,33 @@ const requests: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const budget = body.budget || undefined;
-    if (
-      budget &&
-      budget.min !== undefined &&
-      budget.max !== undefined &&
-      Number(budget.min) > Number(budget.max)
-    ) {
+    const budget = body.budget || {};
+    const budgetMin = budget.min !== undefined ? Number(budget.min) : undefined;
+    const budgetMax = budget.max !== undefined ? Number(budget.max) : undefined;
+
+    if (budgetMin !== undefined && budgetMax !== undefined && budgetMin > budgetMax) {
       throw new AppError('Minimum budget cannot exceed maximum budget', {
         code: 'VALIDATION_ERROR',
         statusCode: 400,
       });
     }
 
-    const created = createRequest({
-      requesterId: user.userId,
-      title: String(body.title).trim(),
-      description: String(body.description).trim(),
-      budget,
-      category: body.category,
-      skills: body.skills || [],
-      experienceLevel: body.experienceLevel,
-      location: body.location,
-      deadline: body.deadline,
-      status: 'open',
-      urgency: body.urgency,
-    } as any);
+    const created = await prisma.workRequest.create({
+      data: {
+        requesterId: user.userId,
+        title: String(body.title).trim(),
+        description: String(body.description).trim(),
+        category: body.category || 'general',
+        skills: Array.isArray(body.skills) ? body.skills : [],
+        budgetMin,
+        budgetMax,
+        currency: budget.currency || body.currency || 'USD',
+        urgency: body.urgency,
+        status: 'open',
+      },
+    });
 
-    return createdResponse(reply, created);
+    return createdResponse(reply, serializeRequest(created));
   });
 
   fastify.patch('/requests/:id', async (request, reply) => {
@@ -111,10 +134,13 @@ const requests: FastifyPluginAsync = async (fastify) => {
     requireRequestUser(user);
     const { id } = request.params as { id: string };
     const body = request.body as Record<string, any>;
-    const existing = getRequestById(id) as any;
+
+    const existing = await prisma.workRequest.findUnique({ where: { id } });
+
     if (!existing) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Request not found' } });
     }
+
     if (existing.requesterId !== user.userId) {
       return reply
         .status(403)
@@ -127,56 +153,62 @@ const requests: FastifyPluginAsync = async (fastify) => {
         statusCode: 400,
       });
     }
+
     if (body.description !== undefined && String(body.description).trim().length < 20) {
       throw new AppError('Description must be at least 20 characters', {
         code: 'VALIDATION_ERROR',
         statusCode: 400,
       });
     }
-    if (
-      body.budget &&
-      body.budget.min !== undefined &&
-      body.budget.max !== undefined &&
-      Number(body.budget.min) > Number(body.budget.max)
-    ) {
+
+    const budget = body.budget;
+    const budgetMin = budget?.min !== undefined ? Number(budget.min) : undefined;
+    const budgetMax = budget?.max !== undefined ? Number(budget.max) : undefined;
+
+    if (budgetMin !== undefined && budgetMax !== undefined && budgetMin > budgetMax) {
       throw new AppError('Minimum budget cannot exceed maximum budget', {
         code: 'VALIDATION_ERROR',
         statusCode: 400,
       });
     }
 
-    Object.assign(existing, {
-      title: body.title !== undefined ? String(body.title).trim() : existing.title,
-      description:
-        body.description !== undefined ? String(body.description).trim() : existing.description,
-      budget: body.budget || existing.budget,
-      category: body.category || existing.category,
-      skills: body.skills || existing.skills,
-      experienceLevel: body.experienceLevel || existing.experienceLevel,
-      location: body.location || existing.location,
-      deadline: body.deadline || existing.deadline,
-      urgency: body.urgency || existing.urgency,
-      status: body.status || existing.status,
-      updatedAt: new Date().toISOString(),
+    const updated = await prisma.workRequest.update({
+      where: { id },
+      data: {
+        title: body.title !== undefined ? String(body.title).trim() : undefined,
+        description: body.description !== undefined ? String(body.description).trim() : undefined,
+        category: body.category,
+        skills: Array.isArray(body.skills) ? body.skills : undefined,
+        budgetMin,
+        budgetMax,
+        currency: budget?.currency || body.currency,
+        urgency: body.urgency,
+        status: body.status,
+      },
     });
 
-    return successResponse(reply, existing);
+    return successResponse(reply, serializeRequest(updated));
   });
 
   fastify.delete('/requests/:id', async (request, reply) => {
     const user = await authenticate(request, reply);
     requireRequestUser(user);
     const { id } = request.params as { id: string };
-    const index = mockRequests.findIndex((item) => item.id === id);
-    if (index === -1) {
+
+    const existing = await prisma.workRequest.findUnique({ where: { id } });
+
+    if (!existing) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Request not found' } });
     }
-    if (mockRequests[index].requesterId !== user.userId) {
+
+    if (existing.requesterId !== user.userId) {
       return reply
         .status(403)
         .send({ error: { code: 'FORBIDDEN', message: 'You cannot delete this request' } });
     }
-    mockRequests.splice(index, 1);
+
+    await prisma.workRequest.delete({ where: { id } });
+
     return successResponse(reply, { deleted: true });
   });
 };
