@@ -33,6 +33,12 @@ export interface AdminService {
   getFraudSignals(): Promise<FraudSignal[]>;
   getPendingReviews(): Promise<ReviewModeration[]>;
   resolveDispute(id: string, resolution: string, resolvedBy: string): Promise<Dispute>;
+  updateDisputeStatus(
+    id: string,
+    action: 'resolve' | 'reject',
+    resolution: string,
+    processedBy: string,
+  ): Promise<Dispute>;
   flagReview(reviewId: string, flags: any[], flaggedBy: string): Promise<ReviewModeration>;
   banUser(userId: string, reason: string, bannedBy: string): Promise<AdminAction>;
   refundDeal(dealId: string, reason: string, refundedBy: string): Promise<AdminAction>;
@@ -151,6 +157,37 @@ class AdminServiceImpl implements AdminService {
     dispute.resolution = resolution;
     dispute.resolvedBy = resolvedBy;
     dispute.resolvedAt = new Date().toISOString();
+    return dispute as Dispute;
+  }
+
+  async updateDisputeStatus(
+    id: string,
+    action: 'resolve' | 'reject',
+    resolution: string,
+    processedBy: string,
+  ): Promise<Dispute> {
+    const dispute = (mockDisputes as any[]).find((item) => item.id === id);
+    if (!dispute) throw new Error('Dispute not found');
+    if (dispute.status !== 'open' && dispute.status !== 'under_review') {
+      throw new Error('Dispute is already closed');
+    }
+
+    dispute.status = action === 'resolve' ? 'resolved' : 'rejected';
+    dispute.resolution = resolution;
+    dispute.resolvedBy = processedBy;
+    dispute.resolvedAt = new Date().toISOString();
+
+    // Logic hoàn tiền / phân bổ quỹ (mock)
+    if (action === 'resolve') {
+      console.log(
+        `[Admin] Disputed Resolved: Hoàn tiền (Refund) cho Client của Deal ${dispute.dealId}`,
+      );
+    } else {
+      console.log(
+        `[Admin] Disputed Rejected: Giải phóng quỹ (Release Funds) cho Provider của Deal ${dispute.dealId}`,
+      );
+    }
+
     return dispute as Dispute;
   }
 

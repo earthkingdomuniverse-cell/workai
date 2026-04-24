@@ -40,6 +40,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(registerPlugins);
   await app.register(registerRoutes, { prefix: `${config.api.prefix}/v1` });
 
+  app.get('/', async (_request, reply) => {
+    return reply.sendFile('index.html');
+  });
+
   app.get('/health', async (_request, reply) => {
     return reply.send({
       status: 'ok',

@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -44,17 +44,20 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: 🏷️ Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body: |
-            ## 🚀 What's Changed
-            ${{ steps.changelog.outputs.changelog }}
+      - name: 📦 Package build artifact
+        run: tar -czf workai-dist.tar.gz dist
 
-            ## 📦 Assets
-            - Build artifacts included below
-          generate_release_notes: true
-          files: |
-            dist/**
+      - name: 🏷️ Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            workai-dist.tar.gz \
+            --generate-notes \
+            --notes "## 🚀 What's Changed
+
+          ${CHANGELOG}
+
+          ## 📦 Assets
+          - workai-dist.tar.gz"

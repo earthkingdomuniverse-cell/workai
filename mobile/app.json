@@ -13,9 +13,6 @@
       "bundler": "metro"
     },
     "plugins": ["expo-router", "expo-font"],
-    "scheme": "skillvalue-ai",
-    "experiments": {
-      "typedRoutes": true
-    }
+    "scheme": "skillvalue-ai"
   }
 }

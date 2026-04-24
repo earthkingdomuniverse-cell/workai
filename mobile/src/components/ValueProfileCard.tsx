@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ProgressBar } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 import { SkillTagList, Skill } from './SkillTagList';
 
@@ -54,11 +54,14 @@ export function ValueProfileCard({
             <Text style={styles.progressLabel}>Profile Completion</Text>
             <Text style={styles.progressValue}>{completionPercentage}%</Text>
           </View>
-          <ProgressBar
-            progress={completionPercentage / 100}
-            color={theme.colors.primary[500]}
-            style={styles.progressBar}
-          />
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${Math.max(0, Math.min(completionPercentage, 100))}%` },
+              ]}
+            />
+          </View>
           {completed && <Text style={styles.completedText}>✓ Profile Complete</Text>}
         </View>
       )}
@@ -191,6 +194,12 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: theme.colors.background.tertiary,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: theme.colors.primary[500],
   },
   completedText: {
     fontSize: theme.typography.fontSize.xs,

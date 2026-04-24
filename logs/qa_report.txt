@@ -1,0 +1,22 @@
+[2026-04-24 06:22:43] Starting QA run: lint, typecheck, tests, build, API smoke
+[2026-04-24 06:22:43] Stopping any existing backend/swarm processes...
+[2026-04-24 06:22:45] Installing dependencies (root and mobile)
+[2026-04-24 06:24:33] Starting backend (port 3000)
+[2026-04-24 06:24:40] Waiting for backend to respond on health endpoint...
+[2026-04-24 06:25:33] Backend health check passed
+[2026-04-24 06:25:33] Running lint...
+[2026-04-24 06:25:54] Running typecheck...
+[2026-04-24 06:26:18] Running unit tests...
+[2026-04-24 06:26:37] Running build...
+[2026-04-24 06:27:00] Running API smoke tests (test-api.sh)
+[2026-04-24 06:27:14] QA run finished in 270s
+[2026-04-24 06:27:16] Logs available at /Users/lha/Documents/workai/logs and report at /Users/lha/Documents/workai/logs/qa_report.txt
+\n=== QA REPORT SUMMARY ===
+Duration: 270s
+Backend PID: 69040
+Lint: 0
+Typecheck: 0
+Unit tests: 0
+Build: 0
+API smoke: 0
+[2026-04-24 06:27:19] Done. Please review the QA report at /Users/lha/Documents/workai/logs/qa_report.txt.

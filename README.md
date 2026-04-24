@@ -1,12 +1,61 @@
-# SkillValue AI
+# WorkAI Platform
 
-Backend + mobile workspace for SkillValue AI Official Product 1.0.
+WorkAI là một AI marketplace giúp kết nối người có nhu cầu công việc với người có kỹ năng thực thi, đồng thời giảm ma sát trong matching, pricing, trust và dispute resolution. Repo này không chỉ là backend demo; nó được tổ chức như một product workspace với backend API, mobile app, vận hành GitHub-native và bộ tài liệu product đi kèm.
 
-## Status
+## 📊 Status & Quality
 
-- Backend TypeScript build passes: `npm run typecheck` and `npm run build`
-- Backend currently runs in mock-first mode
-- Mobile source tree exists under `mobile/`, but this repo currently does not include a standalone `mobile/package.json`
+[![CI Pipeline](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/ci.yml/badge.svg)](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/codeql.yml/badge.svg)](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/codeql.yml)
+[![Docker Image](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/docker-ghcr.yml/badge.svg)](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/docker-ghcr.yml)
+[![Docs Portal](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/deploy.yml/badge.svg)](https://github.com/earthkingdomuniverse-cell/workai/actions/workflows/deploy.yml)
+
+- **Product surface**: backend API, mobile app, AI workflows, admin/trust operations.
+- **CI/CD**: GitHub Actions cho lint, typecheck, test coverage, build và release/docs workflows.
+- **Security**: GitHub CodeQL, Dependabot và audit automation.
+- **Distribution**: GitHub Pages cho portal docs, GitHub Releases cho artifact, GHCR cho container image.
+
+## Product Positioning
+
+WorkAI nhắm tới ba nhóm chính:
+
+- **Clients**: tạo request, nhận matching, so sánh proposal, theo dõi deal.
+- **Professionals / Providers**: công bố offer, nhận gợi ý việc phù hợp, quản lý trust score và review.
+- **Operators / Admins**: giám sát risk, fraud, dispute và chất lượng marketplace.
+
+Giá trị cốt lõi của product:
+
+- **Faster matching**: AI hỗ trợ kết nối nhu cầu với kỹ năng phù hợp.
+- **Safer transactions**: trust signals, review, risk scoring và moderation flow.
+- **Operational clarity**: admin surface cho dispute, fraud và release decisions.
+- **Product-ready workflow**: repo, docs, release và community flow được đóng gói như một sản phẩm thực thụ.
+
+## Product Modules
+
+- **Marketplace Core**: requests, offers, proposals, deals, transactions.
+- **AI Layer**: match, price recommendation, support, next action.
+- **Trust Layer**: reviews, trust scoring, fraud signals, admin moderation.
+- **Experience Layer**: Expo mobile app, onboarding, profile, notifications, activity.
+- **Operations Layer**: GitHub-native CI, Pages, release, issue forms, templates và security policy.
+
+## GitHub-Native Product Ops
+
+WorkAI được đóng gói để có thể vận hành chủ yếu bằng hạ tầng miễn phí của GitHub:
+
+- `GitHub Actions`: backend CI, Pages deploy, repo health jobs.
+- `GitHub CodeQL`: SAST cho TypeScript.
+- `Dependabot`: cập nhật dependency cho backend, mobile và workflows.
+- `GitHub Pages`: public docs / product portal từ `docs/`.
+- `GitHub Releases`: artifact cho các tag `v*`.
+- `GitHub Container Registry`: publish image nếu cần môi trường chạy container.
+- `Issues + PR templates`: tiếp nhận bug report, feature request và feedback theo chuẩn product.
+
+## Product Docs
+
+- [PRODUCT.md](PRODUCT.md)
+- [docs/index.html](docs/index.html)
+- [docs/roadmap.md](docs/roadmap.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
 
 ## Install
 
@@ -31,7 +80,7 @@ cp .env.example .env
 - `OPENAI_API_KEY=` optional
 - `EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1`
 
-## Run Backend Dev
+## Run Backend Dev (Local)
 
 ```bash
 npm run dev
@@ -42,6 +91,24 @@ Backend URLs:
 - Health: `http://localhost:3000/health`
 - Swagger: `http://localhost:3000/docs`
 - API base: `http://localhost:3000/api/v1`
+
+## Run in GitHub Codespaces
+
+WorkAI supports GitHub Codespaces. A dev container is defined under `.devcontainer` and will be used automatically when you create a codespace.
+
+- Create a codespace from the repository (main branch).
+- The container will install dependencies automatically (root and mobile).
+- Forwarded ports: 3000 (backend) and 19000 (Expo dev server).
+- Start backend: open a terminal in codespace and run:
+  - `npm run dev`
+- Start mobile (Expo): in another terminal, run:
+  - `cd mobile && npm ci && npx expo start --tunnel`
+- You can connect from a physical device using Expo's QR code with tunnel connectivity.
+
+Notes:
+
+- In codespaces, the backend is available at the codespace-assigned URL with port 3000 (e.g., http://<codespace-id>:3000).
+- If you run Expo in tunnel mode, ensure you use the tunnel URL/QR to connect your device.
 
 ## Run Backend Build
 
@@ -119,3 +186,9 @@ curl -X POST http://localhost:3000/api/v1/admin/review -H 'Content-Type: applica
 - Admin moderation persistence
 - Payment processor integration
 - Mobile runtime packaging and Expo bootstrapping
+
+## Product Roadmap Snapshot
+
+- **Phase 1**: mock-first marketplace core and AI-assisted flows.
+- **Phase 2**: productization of mobile UX, admin operations and release hygiene.
+- **Phase 3**: persistence, payments, real authz, live AI integration and production analytics.

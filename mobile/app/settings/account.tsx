@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../theme';
@@ -13,14 +13,14 @@ export default function AccountSettingsScreen() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Account Settings</Text>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Profile Information</Text>
         <TouchableOpacity style={styles.settingItem} onPress={() => {}}>
           <Text style={styles.settingText}>Personal Information</Text>
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Security</Text>
         <TouchableOpacity style={styles.settingItem} onPress={() => {}}>
@@ -30,14 +30,14 @@ export default function AccountSettingsScreen() {
           <Text style={styles.settingText}>Two-Factor Authentication</Text>
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Billing</Text>
         <TouchableOpacity style={styles.settingItem} onPress={handleTransactionHistoryPress}>
           <Text style={styles.settingText}>Transaction History</Text>
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
         <TouchableOpacity style={styles.settingItem} onPress={() => {}}>
@@ -47,7 +47,7 @@ export default function AccountSettingsScreen() {
           <Text style={styles.settingText}>Privacy Settings</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

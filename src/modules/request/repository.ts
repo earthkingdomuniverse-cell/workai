@@ -90,10 +90,11 @@ class InMemoryRequestRepository implements RequestRepository {
           case 'proposals':
             compare = (b.proposalsCount || 0) - (a.proposalsCount || 0);
             break;
-          case 'urgency':
+          case 'urgency': {
             const urgencyOrder = { urgent: 3, high: 2, medium: 1, low: 0 };
             compare = (urgencyOrder[b.urgency] || 0) - (urgencyOrder[a.urgency] || 0);
             break;
+          }
           case 'createdAt':
           default:
             compare = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();

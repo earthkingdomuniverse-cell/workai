@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../../theme';
-const { colors, spacing, typography } = theme;
 import RecommendationCard from '../../src/components/RecommendationCard';
 import { offerService, Offer } from '../../src/services/offerService';
 import { requestService } from '../../src/services/requestService';
@@ -88,7 +87,7 @@ export default function ExploreScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.primary[500]} />
         </View>
       ) : (
         recommendations.map((rec) => (
@@ -106,19 +105,19 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background.primary,
   },
   header: {
-    padding: spacing.lg,
+    padding: theme.spacing.lg,
   },
   title: {
-    ...typography.h1,
-    color: colors.text,
+    ...theme.typography.h1,
+    color: theme.colors.text.primary,
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
+    padding: theme.spacing.xl,
   },
 });

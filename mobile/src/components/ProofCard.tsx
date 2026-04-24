@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, typography } from '../../src/theme';
+import { colors, spacing, typography, radius } from '../../src/theme';
 
 interface ProofCardProps {
   type: 'id' | 'address' | 'education' | 'employment' | 'financial' | 'other';

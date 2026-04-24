@@ -25,6 +25,7 @@ export interface RequestItem {
   views?: number;
   requesterId?: string;
   requester?: {
+    id?: string;
     displayName: string;
     avatarUrl?: string;
     trustScore: number;
@@ -89,6 +90,22 @@ class RequestService {
     urgency?: string;
     location?: string;
   }): Promise<RequestItem[]> {
+    if (ENABLE_MOCK_MODE) {
+      let items = [...mockRequests];
+      if (filters?.q) {
+        const q = filters.q.toLowerCase();
+        items = items.filter(
+          (item) =>
+            item.title.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
+        );
+      }
+      if (filters?.urgency && filters.urgency !== 'all')
+        items = items.filter((item) => item.urgency === filters.urgency);
+      if (filters?.location && filters.location !== 'all')
+        items = items.filter((item) => item.location?.type === filters.location);
+      return items;
+    }
+
     try {
       const params = new URLSearchParams();
       if (filters?.q) params.append('q', filters.q);
@@ -118,6 +135,12 @@ class RequestService {
   }
 
   async getRequest(id: string): Promise<RequestItem> {
+    if (ENABLE_MOCK_MODE) {
+      const item = mockRequests.find((req) => req.id === id);
+      if (!item) throw new Error('Request not found');
+      return item;
+    }
+
     try {
       const response = await apiClient.get<{ data: RequestItem }>(`/requests/${id}`);
       return response.data;
@@ -130,6 +153,10 @@ class RequestService {
   }
 
   async getMyRequests(): Promise<RequestItem[]> {
+    if (ENABLE_MOCK_MODE) {
+      return mockRequests.filter((item) => item.requesterId === 'user_1');
+    }
+
     try {
       const response = await apiClient.get<{ data: { items: RequestItem[] } }>('/requests/mine');
       return response.data.items;
@@ -140,6 +167,27 @@ class RequestService {
   }
 
   async createRequest(payload: RequestPayload): Promise<RequestItem> {
+    if (ENABLE_MOCK_MODE) {
+      const item: RequestItem = {
+        id: `request_${Date.now()}`,
+        title: payload.title,
+        description: payload.description,
+        budget: payload.budget,
+        skills: payload.skills || [],
+        experienceLevel: payload.experienceLevel,
+        location: payload.location,
+        urgency: payload.urgency || 'medium',
+        deadline: payload.deadline,
+        status: 'open',
+        proposalsCount: 0,
+        views: 0,
+        requesterId: 'user_1',
+        requester: { displayName: 'Mock Requester', trustScore: 80 },
+      };
+      mockRequests.unshift(item);
+      return item;
+    }
+
     try {
       const response = await apiClient.post<{ data: RequestItem }>('/requests', payload);
       return response.data;
@@ -170,6 +218,13 @@ class RequestService {
     id: string,
     payload: Partial<RequestPayload> & { status?: RequestItem['status'] },
   ): Promise<RequestItem> {
+    if (ENABLE_MOCK_MODE) {
+      const index = mockRequests.findIndex((item) => item.id === id);
+      if (index === -1) throw new Error('Request not found');
+      mockRequests[index] = { ...mockRequests[index], ...payload } as RequestItem;
+      return mockRequests[index];
+    }
+
     try {
       const response = await apiClient.patch<{ data: RequestItem }>(`/requests/${id}`, payload);
       return response.data;
@@ -183,6 +238,12 @@ class RequestService {
   }
 
   async deleteRequest(id: string): Promise<void> {
+    if (ENABLE_MOCK_MODE) {
+      const index = mockRequests.findIndex((item) => item.id === id);
+      if (index >= 0) mockRequests.splice(index, 1);
+      return;
+    }
+
     try {
       await apiClient.delete<{ data: { deleted: boolean } }>(`/requests/${id}`);
       return;

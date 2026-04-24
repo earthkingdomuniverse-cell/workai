@@ -1,3 +1,4 @@
+import { ENABLE_MOCK_MODE } from '../constants/config';
 import apiClient from './apiClient';
 import { generateMockDeals, generateMockDeal } from './mockData';
 
@@ -141,6 +142,10 @@ export const dealService = {
     page?: number;
     limit?: number;
   }): Promise<Deal[]> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockDeals(filters?.limit || 10, filters);
+    }
+
     try {
       const params = new URLSearchParams();
       if (filters?.providerId) params.append('providerId', filters.providerId);
@@ -164,6 +169,10 @@ export const dealService = {
   },
 
   async getDeal(id: string): Promise<Deal> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockDeal(id);
+    }
+
     try {
       const response = await apiClient.get(`/deals/${id}`);
       return response.data;
@@ -177,6 +186,10 @@ export const dealService = {
   },
 
   async getMyDealsAsProvider(): Promise<Deal[]> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockDeals(5);
+    }
+
     try {
       const response = await apiClient.get('/deals?providerId=me');
       return response.data?.items || [];
@@ -190,6 +203,10 @@ export const dealService = {
   },
 
   async getDealsAsClient(): Promise<Deal[]> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockDeals(5);
+    }
+
     try {
       const response = await apiClient.get('/deals?clientId=me');
       return response.data?.items || [];
@@ -203,6 +220,10 @@ export const dealService = {
   },
 
   async createDeal(data: CreateDealInput): Promise<Deal> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockDeal('new-deal', data);
+    }
+
     try {
       const response = await apiClient.post('/deals', data);
       return response.data;
@@ -216,6 +237,13 @@ export const dealService = {
   },
 
   async fundDeal(id: string, data: FundDealInput): Promise<Deal> {
+    if (ENABLE_MOCK_MODE) {
+      const deal = generateMockDeal(id);
+      deal.status = 'funded';
+      deal.fundedAmount = deal.amount;
+      return deal;
+    }
+
     try {
       const response = await apiClient.post(`/deals/${id}/fund`, data);
       return response.data;
@@ -232,6 +260,12 @@ export const dealService = {
   },
 
   async submitWork(id: string, data: SubmitWorkInput): Promise<Deal> {
+    if (ENABLE_MOCK_MODE) {
+      const deal = generateMockDeal(id);
+      deal.status = 'submitted';
+      return deal;
+    }
+
     try {
       const response = await apiClient.post(`/deals/${id}/submit`, data);
       return response.data;
@@ -247,6 +281,13 @@ export const dealService = {
   },
 
   async releaseFunds(id: string, data: ReleaseFundsInput): Promise<Deal> {
+    if (ENABLE_MOCK_MODE) {
+      const deal = generateMockDeal(id);
+      deal.status = 'released';
+      deal.releasedAmount = deal.amount;
+      return deal;
+    }
+
     try {
       const response = await apiClient.post(`/deals/${id}/release`, data);
       return response.data;

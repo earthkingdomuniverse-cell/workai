@@ -24,16 +24,25 @@ export default function RequestDetailScreen() {
         const data = await requestService.getRequest(id as string);
 
         // Fetch requester trust profile from trust API for accurate data
-        let trust = null;
-        if (data.requesterId || data.requester?.id) {
+        let trust: TrustProfile | null = null;
+        if (data.requesterId) {
           try {
-            trust = await trustService.getTrustProfile(data.requesterId || data.requester?.id);
+            trust = await trustService.getTrustProfile(data.requesterId);
           } catch (e) {
             // Trust not found, will use fallback from request data
           }
         }
         setRequesterTrust(trust);
-        setRequest(data);
+        setRequest({
+          ...data,
+          requester: data.requester
+            ? {
+                ...data.requester,
+                trustScore: trust?.trustScore ?? data.requester.trustScore,
+                completedDeals: trust?.completedDeals ?? data.requester.completedDeals,
+              }
+            : data.requester,
+        });
       } catch (_err) {
         setError('Failed to load request details');
       } finally {

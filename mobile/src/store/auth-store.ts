@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { create } from 'zustand/index.js';
+import { createJSONStorage, persist } from 'zustand/middleware.js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/authService';
 import { apiClient } from '../services/apiClient';
@@ -166,3 +166,25 @@ export const useAuthStore = create<AuthState & AuthActions>()(
     },
   ),
 );
+
+// Register interceptor for 401 Unauthorized
+apiClient.setRefreshHandler(async () => {
+  const { refreshToken, logout } = useAuthStore.getState();
+  if (refreshToken) {
+    try {
+      const response = await authService.refreshToken(refreshToken);
+      useAuthStore.setState({
+        token: response.token,
+        refreshToken: response.refreshToken,
+        user: response.user,
+      });
+      return response.token;
+    } catch (e) {
+      // If refresh token fails, user must log in again
+      await logout();
+      return null;
+    }
+  }
+  return null;
+});
+

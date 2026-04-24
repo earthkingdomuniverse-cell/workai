@@ -3,6 +3,7 @@ import { API_URL } from '../constants/config';
 export class ApiClient {
   private baseURL: string;
   private token: string | null = null;
+  private refreshHandler: (() => Promise<string | null>) | null = null;
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
@@ -12,7 +13,11 @@ export class ApiClient {
     this.token = token;
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  setRefreshHandler(handler: () => Promise<string | null>) {
+    this.refreshHandler = handler;
+  }
+
+  private async request<T = any>(endpoint: string, options?: RequestInit & { _isRetry?: boolean }): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
     const headers: HeadersInit = {
@@ -28,43 +33,65 @@ export class ApiClient {
       },
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
 
     if (!response.ok) {
+      if (
+        response.status === 401 &&
+        this.refreshHandler &&
+        !options?._isRetry &&
+        !endpoint.includes('/auth/refresh')
+      ) {
+        try {
+          const newToken = await this.refreshHandler();
+          if (newToken) {
+            this.setToken(newToken);
+            return this.request<T>(endpoint, { ...options, _isRetry: true });
+          }
+        } catch (refreshErr) {
+          // Refresh failed, proceed to throw original error
+        }
+      }
       throw new Error(data.error?.message || 'Request failed');
     }
 
     return data;
   }
 
-  async get<T>(endpoint: string): Promise<T> {
+  async get<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, body?: any): Promise<T> {
+  async post<T = any>(endpoint: string, body?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: JSON.stringify(body),
     });
   }
 
-  async put<T>(endpoint: string, body?: any): Promise<T> {
+  async put<T = any>(endpoint: string, body?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(body),
     });
   }
 
-  async patch<T>(endpoint: string, body?: any): Promise<T> {
+  async patch<T = any>(endpoint: string, body?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: JSON.stringify(body),
     });
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 }
 
 export const apiClient = new ApiClient(API_URL);
+export default apiClient;

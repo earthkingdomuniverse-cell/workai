@@ -147,7 +147,7 @@ export interface AdminFilter {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface ReviewQueueItem extends ReviewModeration {}
-export interface DisputeCase extends Dispute {}
-export interface FraudReport extends FraudSignal {}
-export interface RiskSignal extends RiskFlag {}
+export type ReviewQueueItem = ReviewModeration;
+export type DisputeCase = Dispute;
+export type FraudReport = FraudSignal;
+export type RiskSignal = RiskFlag;

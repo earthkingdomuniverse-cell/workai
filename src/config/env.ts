@@ -36,6 +36,10 @@ const envSchema = z.object({
 
   // App
   APP_NAME: z.string().default('SkillValue AI Backend'),
+  // Zalo integration
+  ZALO_APP_ID: z.string().optional(),
+  ZALO_APP_SECRET: z.string().optional(),
+  ZALO_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

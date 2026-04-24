@@ -16,9 +16,12 @@ export interface Offer {
   proposalsCount?: number;
   providerId?: string;
   provider?: {
+    id?: string;
     displayName: string;
     avatarUrl?: string;
     trustScore: number;
+    verificationLevel?: 'unverified' | 'basic' | 'verified' | 'premium_verified';
+    completedDeals?: number;
   };
 }
 
@@ -71,6 +74,21 @@ const mockOffers: Offer[] = [
 
 class OfferService {
   async getOffers(filters?: { q?: string; pricingType?: string }): Promise<Offer[]> {
+    if (ENABLE_MOCK_MODE) {
+      let items = [...mockOffers];
+      if (filters?.q) {
+        const q = filters.q.toLowerCase();
+        items = items.filter(
+          (item) =>
+            item.title.toLowerCase().includes(q) || item.description.toLowerCase().includes(q),
+        );
+      }
+      if (filters?.pricingType && filters.pricingType !== 'all') {
+        items = items.filter((item) => item.pricingType === filters.pricingType);
+      }
+      return items;
+    }
+
     try {
       const params = new URLSearchParams();
       if (filters?.q) params.append('q', filters.q);
@@ -98,6 +116,12 @@ class OfferService {
   }
 
   async getOffer(id: string): Promise<Offer> {
+    if (ENABLE_MOCK_MODE) {
+      const item = mockOffers.find((offer) => offer.id === id);
+      if (!item) throw new Error('Offer not found');
+      return item;
+    }
+
     try {
       const response = await apiClient.get<{ data: Offer }>(`/offers/${id}`);
       return response.data;
@@ -110,6 +134,10 @@ class OfferService {
   }
 
   async getMyOffers(): Promise<Offer[]> {
+    if (ENABLE_MOCK_MODE) {
+      return mockOffers.filter((item) => item.providerId === 'user_1');
+    }
+
     try {
       const response = await apiClient.get<{ data: { items: Offer[] } }>('/offers/mine');
       return response.data.items;
@@ -120,6 +148,27 @@ class OfferService {
   }
 
   async createOffer(payload: OfferPayload): Promise<Offer> {
+    if (ENABLE_MOCK_MODE) {
+      const offer: Offer = {
+        id: `offer_${Date.now()}`,
+        title: payload.title,
+        description: payload.description,
+        price: payload.price,
+        currency: payload.currency || 'USD',
+        pricingType: payload.pricingType || 'fixed',
+        deliveryTime: payload.deliveryTime,
+        skills: payload.skills || [],
+        status: 'active',
+        providerId: 'user_1',
+        provider: { displayName: 'Mock User', trustScore: 80 },
+        views: 0,
+        likes: 0,
+        proposalsCount: 0,
+      };
+      mockOffers.unshift(offer);
+      return offer;
+    }
+
     try {
       const response = await apiClient.post<{ data: Offer }>('/offers', payload);
       return response.data;
@@ -150,6 +199,16 @@ class OfferService {
     id: string,
     payload: Partial<OfferPayload> & { status?: Offer['status'] },
   ): Promise<Offer> {
+    if (ENABLE_MOCK_MODE) {
+      const index = mockOffers.findIndex((item) => item.id === id);
+      if (index === -1) throw new Error('Offer not found');
+      mockOffers[index] = {
+        ...mockOffers[index],
+        ...payload,
+      } as Offer;
+      return mockOffers[index];
+    }
+
     try {
       const response = await apiClient.patch<{ data: Offer }>(`/offers/${id}`, payload);
       return response.data;
@@ -166,6 +225,12 @@ class OfferService {
   }
 
   async deleteOffer(id: string): Promise<void> {
+    if (ENABLE_MOCK_MODE) {
+      const index = mockOffers.findIndex((item) => item.id === id);
+      if (index >= 0) mockOffers.splice(index, 1);
+      return;
+    }
+
     const index = mockOffers.findIndex((item) => item.id === id);
     if (index >= 0) mockOffers.splice(index, 1);
   }

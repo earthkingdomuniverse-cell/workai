@@ -100,7 +100,7 @@ export default function AiMatchScreen() {
       />
 
       <View style={styles.urgencyRow}>
-        {['low', 'medium', 'high'].map((item) => (
+        {(['low', 'medium', 'high'] as const).map((item) => (
           <TouchableOpacity
             key={item}
             style={[styles.urgencyChip, urgency === item && styles.urgencyChipActive]}

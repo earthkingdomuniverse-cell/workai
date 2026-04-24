@@ -1,3 +1,4 @@
+import { ENABLE_MOCK_MODE } from '../constants/config';
 import apiClient from './apiClient';
 import { generateMockProposals, generateMockProposal } from './mockData';
 
@@ -62,6 +63,10 @@ export const proposalService = {
     page?: number;
     limit?: number;
   }): Promise<Proposal[]> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockProposals(filters?.limit || 5);
+    }
+
     try {
       const params = new URLSearchParams();
       if (filters?.requestId) params.append('requestId', filters.requestId);
@@ -87,6 +92,10 @@ export const proposalService = {
   },
 
   async getProposal(id: string): Promise<Proposal> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockProposal(id);
+    }
+
     try {
       const response = await apiClient.get(`/proposals/${id}`);
       return response.data?.data;
@@ -100,6 +109,10 @@ export const proposalService = {
   },
 
   async getMyProposals(): Promise<Proposal[]> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockProposals(5);
+    }
+
     try {
       const response = await apiClient.get('/proposals/mine');
       return response.data?.data?.items || [];
@@ -113,6 +126,10 @@ export const proposalService = {
   },
 
   async createProposal(data: CreateProposalInput): Promise<Proposal> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockProposal('new-proposal');
+    }
+
     try {
       const response = await apiClient.post('/proposals', data);
       return response.data?.data;
@@ -126,6 +143,10 @@ export const proposalService = {
   },
 
   async acceptProposal(id: string): Promise<Proposal> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockProposal(id, 'accepted');
+    }
+
     try {
       const response = await apiClient.post(`/proposals/${id}/accept`);
       return response.data?.data;
@@ -140,6 +161,10 @@ export const proposalService = {
   },
 
   async rejectProposal(id: string): Promise<Proposal> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockProposal(id, 'rejected');
+    }
+
     try {
       const response = await apiClient.post(`/proposals/${id}/reject`);
       return response.data?.data;
@@ -154,6 +179,10 @@ export const proposalService = {
   },
 
   async withdrawProposal(id: string): Promise<Proposal> {
+    if (ENABLE_MOCK_MODE) {
+      return generateMockProposal(id, 'withdrawn');
+    }
+
     try {
       const response = await apiClient.post(`/proposals/${id}/withdraw`);
       return response.data?.data;
@@ -168,6 +197,11 @@ export const proposalService = {
   },
 
   async updateProposal(id: string, data: Partial<CreateProposalInput>): Promise<Proposal> {
+    if (ENABLE_MOCK_MODE) {
+      const proposal = generateMockProposal(id);
+      return { ...proposal, ...data };
+    }
+
     try {
       const response = await apiClient.patch(`/proposals/${id}`, data);
       return response.data?.data;
@@ -182,6 +216,10 @@ export const proposalService = {
   },
 
   async deleteProposal(id: string): Promise<void> {
+    if (ENABLE_MOCK_MODE) {
+      return;
+    }
+
     try {
       await apiClient.delete(`/proposals/${id}`);
     } catch (error) {

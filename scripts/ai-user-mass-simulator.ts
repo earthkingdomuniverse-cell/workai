@@ -2,7 +2,7 @@
 /**
  * AI User Mass Simulator - Chạy mạnh tay, tạo data nhanh
  * Tốc độ cao, log lỗi chi tiết, fix ngay
- * 
+ *
  * Usage: npx tsx scripts/ai-user-mass-simulator.ts --duration=60 --rate=10
  */
 
@@ -47,32 +47,52 @@ async function createUserFast(): Promise<{ email: string; token: string; id: str
   const password = 'MassPass123!';
 
   try {
-    const signupRes = await axios.post(`${API_URL}/auth/signup`, {
-      email,
-      password,
-      role: 'member',
-    }, { timeout: 5000 });
+    const signupRes = await axios.post(
+      `${API_URL}/auth/signup`,
+      {
+        email,
+        password,
+        role: 'member',
+      },
+      { timeout: 5000 },
+    );
 
-    const loginRes = await axios.post(`${API_URL}/auth/login`, {
-      email,
-      password,
-    }, { timeout: 5000 });
+    const loginRes = await axios.post(
+      `${API_URL}/auth/login`,
+      {
+        email,
+        password,
+      },
+      { timeout: 5000 },
+    );
 
-    const token = loginRes.data?.data?.token || loginRes.data?.token;
-    const id = signupRes.data?.data?.id || signupRes.data?.id;
+    const token = loginRes.data?.data?.token || loginRes.data?.token || loginRes.data?.accessToken;
+    const id = signupRes.data?.data?.user?.id || signupRes.data?.data?.id || signupRes.data?.id;
 
     if (token && id) {
       createdUsers.push({ email, token, id });
       stats.usersCreated++;
       return { email, token, id };
     }
+
+    log(
+      'ERROR',
+      `Create user returned unexpected response shape for ${email}: ${JSON.stringify({
+        signup: signupRes.data,
+        login: loginRes.data,
+      })}`,
+    );
     return null;
   } catch (error: any) {
     stats.usersFailed++;
     // If user exists, try login
     if (error.response?.status === 409) {
       try {
-        const loginRes = await axios.post(`${API_URL}/auth/login`, { email, password }, { timeout: 5000 });
+        const loginRes = await axios.post(
+          `${API_URL}/auth/login`,
+          { email, password },
+          { timeout: 5000 },
+        );
         const token = loginRes.data?.data?.token || loginRes.data?.token;
         if (token) {
           createdUsers.push({ email, token, id: 'existing' });
@@ -90,9 +110,10 @@ async function createUserFast(): Promise<{ email: string; token: string; id: str
 }
 
 async function createOfferFast(user: { token: string }): Promise<any> {
-  const skills = faker.helpers.arrayElements([
-    'React', 'Node.js', 'Python', 'Design', 'Writing', 'Marketing'
-  ], faker.number.int({ min: 2, max: 4 }));
+  const skills = faker.helpers.arrayElements(
+    ['React', 'Node.js', 'Python', 'Design', 'Writing', 'Marketing'],
+    faker.number.int({ min: 2, max: 4 }),
+  );
 
   const offer = {
     title: `${skills[0]} Services - ${faker.commerce.productAdjective()}`,
@@ -166,7 +187,7 @@ async function runWorkerBatch(batchSize: number) {
             await createRequestFast(user);
           }
         }
-      })()
+      })(),
     );
   }
 
@@ -175,14 +196,14 @@ async function runWorkerBatch(batchSize: number) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const duration = parseInt(args.find(a => a.startsWith('--duration='))?.split('=')[1] || '60'); // seconds
-  const rate = parseInt(args.find(a => a.startsWith('--rate='))?.split('=')[1] || '10'); // users per batch
+  const duration = parseInt(args.find((a) => a.startsWith('--duration='))?.split('=')[1] || '60'); // seconds
+  const rate = parseInt(args.find((a) => a.startsWith('--rate='))?.split('=')[1] || '10'); // users per batch
 
   console.log('╔═══════════════════════════════════════════════════════════╗');
   console.log('║     AI USER MASS SIMULATOR - HIGH SPEED TEST             ║');
   console.log('╚═══════════════════════════════════════════════════════════╝');
   console.log(`Duration: ${duration}s | Rate: ${rate} users/batch`);
-  console.log(`Target: ~${(duration / 60 * rate * 6).toFixed(0)}K entities (simulating months)`);
+  console.log(`Target: ~${((duration / 60) * rate * 6).toFixed(0)}K entities (simulating months)`);
   console.log('');
 
   // Check API
@@ -195,7 +216,7 @@ async function main() {
   }
 
   const startTime = Date.now();
-  const endTime = startTime + (duration * 1000);
+  const endTime = startTime + duration * 1000;
   let batchNum = 0;
 
   console.log('\n🚀 STARTING MASS SIMULATION...\n');
@@ -207,12 +228,17 @@ async function main() {
     // Stats every 10 batches
     if (batchNum % 10 === 0) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      const rps = ((stats.usersCreated + stats.offersCreated + stats.requestsCreated) / parseFloat(elapsed)).toFixed(1);
-      process.stdout.write(`\r⏳ Batch ${batchNum} | Users: ${stats.usersCreated} | Offers: ${stats.offersCreated} | RPS: ${rps}/s`);
+      const rps = (
+        (stats.usersCreated + stats.offersCreated + stats.requestsCreated) /
+        parseFloat(elapsed)
+      ).toFixed(1);
+      process.stdout.write(
+        `\r⏳ Batch ${batchNum} | Users: ${stats.usersCreated} | Offers: ${stats.offersCreated} | RPS: ${rps}/s`,
+      );
     }
 
     // Small delay to not kill the server
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   // Final stats
@@ -223,12 +249,14 @@ async function main() {
   console.log(`Users: ${stats.usersCreated} (failed: ${stats.usersFailed})`);
   console.log(`Offers: ${stats.offersCreated} (failed: ${stats.offersFailed})`);
   console.log(`Requests: ${stats.requestsCreated} (failed: ${stats.requestsFailed})`);
-  console.log(`Total Entities: ${stats.usersCreated + stats.offersCreated + stats.requestsCreated}`);
+  console.log(
+    `Total Entities: ${stats.usersCreated + stats.offersCreated + stats.requestsCreated}`,
+  );
   console.log(`Errors logged: ${stats.errors.length}`);
 
   if (stats.errors.length > 0) {
     console.log('\n📋 Recent Errors:');
-    stats.errors.slice(-10).forEach(e => console.log(`  ${e}`));
+    stats.errors.slice(-10).forEach((e) => console.log(`  ${e}`));
   }
 
   // Test if system still works
@@ -241,7 +269,7 @@ async function main() {
   }
 }
 
-main().catch(e => {
+main().catch((e) => {
   log('ERROR', `Fatal error: ${e.message}`);
   process.exit(1);
 });

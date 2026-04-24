@@ -17,13 +17,13 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../../theme';
 import messageService, { type Message, type Conversation } from '../../src/services/messageService';
-import LoadingState from '../../src/components/LoadingState';
+import LoadingState from '../../components/LoadingState';
 
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
-  
+
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -39,15 +39,15 @@ export default function ConversationScreen() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const [convData, messagesData] = await Promise.all([
         messageService.getConversation(id),
         messageService.getMessages(id, 1, 50),
       ]);
-      
+
       setConversation(convData);
       setMessages(messagesData.reverse());
-      
+
       // Mark conversation as read
       await messageService.markAsRead(id);
     } catch (err) {
@@ -60,16 +60,16 @@ export default function ConversationScreen() {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
-    
+
     try {
       setIsSending(true);
       const sentMessage = await messageService.sendMessage(id, {
         content: newMessage.trim(),
       });
-      
+
       setMessages((prev) => [...prev, sentMessage]);
       setNewMessage('');
-      
+
       // Scroll to bottom
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
@@ -92,7 +92,7 @@ export default function ConversationScreen() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
       return 'Today';
     } else if (date.toDateString() === yesterday.toDateString()) {
@@ -104,9 +104,9 @@ export default function ConversationScreen() {
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isMe = item.senderId === 'user-me';
-    const showDate = index === 0 || 
-      formatDate(item.createdAt) !== formatDate(messages[index - 1]?.createdAt);
-    
+    const showDate =
+      index === 0 || formatDate(item.createdAt) !== formatDate(messages[index - 1]?.createdAt);
+
     return (
       <View>
         {showDate && (
@@ -119,16 +119,21 @@ export default function ConversationScreen() {
             <Image source={{ uri: item.senderAvatar }} style={styles.avatar} />
           )}
           <View style={[styles.messageBubble, isMe ? styles.myBubble : styles.theirBubble]}>
-            {!isMe && (
-              <Text style={styles.senderName}>{item.senderName}</Text>
-            )}
-            <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
+            {!isMe && <Text style={styles.senderName}>{item.senderName}</Text>}
+            <Text
+              style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}
+            >
               {item.content}
             </Text>
             <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
           </View>
           {isMe && item.readAt && (
-            <Ionicons name="checkmark-done" size={16} color={colors.success} style={styles.readIndicator} />
+            <Ionicons
+              name="checkmark-done"
+              size={16}
+              color={colors.success}
+              style={styles.readIndicator}
+            />
           )}
         </View>
       </View>
@@ -166,7 +171,7 @@ export default function ConversationScreen() {
           ),
         }}
       />
-      
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -181,7 +186,7 @@ export default function ConversationScreen() {
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
         />
-        
+
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -193,7 +198,10 @@ export default function ConversationScreen() {
             maxLength={1000}
           />
           <TouchableOpacity
-            style={[styles.sendButton, (!newMessage.trim() || isSending) && styles.sendButtonDisabled]}
+            style={[
+              styles.sendButton,
+              (!newMessage.trim() || isSending) && styles.sendButtonDisabled,
+            ]}
             onPress={handleSendMessage}
             disabled={!newMessage.trim() || isSending}
           >

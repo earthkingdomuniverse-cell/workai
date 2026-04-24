@@ -31,9 +31,11 @@ export default function OfferDetailScreen() {
         const data = await offerService.getOffer(id as string);
 
         // Try to fetch provider trust profile
-        let trust = null;
+        let trust: TrustProfile | null = null;
         try {
-          trust = await trustService.getTrustProfile(data.providerId || data.provider?.id);
+          if (data.providerId) {
+            trust = await trustService.getTrustProfile(data.providerId);
+          }
         } catch (e) {
           // Trust not found, will use fallback
         }
