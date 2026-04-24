@@ -1,39 +1,81 @@
 import { FastifyPluginAsync } from 'fastify';
 import { successResponse } from '../lib/response';
-import { mockTransactions, mockReceipts } from '../mocks/transactions';
+import { prisma } from '../lib/prisma';
+
+function serializeTransaction(transaction: any) {
+  return {
+    ...transaction,
+    createdAt: transaction.createdAt?.toISOString?.() ?? transaction.createdAt,
+    updatedAt: transaction.updatedAt?.toISOString?.() ?? transaction.updatedAt,
+  };
+}
+
+function transactionToReceipt(transaction: any) {
+  const createdAt = transaction.createdAt?.toISOString?.() ?? transaction.createdAt;
+  const updatedAt = transaction.updatedAt?.toISOString?.() ?? transaction.updatedAt;
+  const deal = transaction.deal;
+
+  return {
+    id: `receipt-${transaction.id}`,
+    transactionId: transaction.id,
+    dealId: transaction.dealId,
+    userId: transaction.userId,
+    type: transaction.type,
+    status: transaction.status,
+    amount: transaction.amount,
+    currency: transaction.currency,
+    provider: transaction.provider,
+    providerRef: transaction.providerRef,
+    referenceNumber: transaction.referenceNumber,
+    issuedAt: createdAt,
+    createdAt,
+    updatedAt,
+    deal: deal
+      ? {
+          id: deal.id,
+          title: deal.title,
+          status: deal.status,
+          amount: deal.amount,
+          currency: deal.currency,
+          providerId: deal.providerId,
+          clientId: deal.clientId,
+        }
+      : undefined,
+  };
+}
+
+const transactionInclude = {
+  deal: true,
+};
 
 const transactions: FastifyPluginAsync = async (fastify) => {
-  // GET /api/transactions
   fastify.get('/transactions', async (request, reply) => {
-    const { userId, dealId, status, type } = request.query as any;
+    const { userId, dealId, status, type } = request.query as Record<string, string | undefined>;
+    const where: any = {};
 
-    let filteredTransactions = [...mockTransactions];
+    if (userId) where.userId = userId;
+    if (dealId) where.dealId = dealId;
+    if (status) where.status = status;
+    if (type) where.type = type;
 
-    if (userId) {
-      filteredTransactions = filteredTransactions.filter((t) => t.userId === userId);
-    }
+    const items = await prisma.transaction.findMany({
+      where,
+      include: transactionInclude,
+      orderBy: { createdAt: 'desc' },
+    });
 
-    if (dealId) {
-      filteredTransactions = filteredTransactions.filter((t) => t.dealId === dealId);
-    }
-
-    if (status) {
-      filteredTransactions = filteredTransactions.filter((t) => t.status === status);
-    }
-
-    if (type) {
-      filteredTransactions = filteredTransactions.filter((t) => t.type === type);
-    }
-
-    return reply.send(
-      successResponse({ items: filteredTransactions, total: filteredTransactions.length }, 'Transactions retrieved successfully'),
-    );
+    return successResponse(reply, {
+      items: items.map(serializeTransaction),
+      total: items.length,
+    });
   });
 
-  // GET /api/transactions/:id
   fastify.get('/transactions/:id', async (request, reply) => {
-    const { id } = request.params as any;
-    const transaction = mockTransactions.find((t) => t.id === id);
+    const { id } = request.params as { id: string };
+    const transaction = await prisma.transaction.findUnique({
+      where: { id },
+      include: transactionInclude,
+    });
 
     if (!transaction) {
       return reply.status(404).send({
@@ -44,30 +86,49 @@ const transactions: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    return reply.send(successResponse(transaction, 'Transaction retrieved successfully'));
+    return successResponse(reply, serializeTransaction(transaction));
   });
 
-  // GET /api/receipts
   fastify.get('/receipts', async (request, reply) => {
-    const { dealId } = request.query as any;
-    const receipts = dealId ? mockReceipts.filter((r) => r.dealId === dealId) : mockReceipts;
-    return reply.send(successResponse({ items: receipts, total: receipts.length }, 'Receipts retrieved successfully'));
+    const { dealId, userId, status, type } = request.query as Record<string, string | undefined>;
+    const where: any = {};
+
+    if (dealId) where.dealId = dealId;
+    if (userId) where.userId = userId;
+    if (status) where.status = status;
+    if (type) where.type = type;
+
+    const transactions = await prisma.transaction.findMany({
+      where,
+      include: transactionInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const receipts = transactions.map(transactionToReceipt);
+    return successResponse(reply, { items: receipts, total: receipts.length });
   });
 
-  // GET /api/deals/:id/receipts
   fastify.get('/deals/:id/receipts', async (request, reply) => {
-    const { id } = request.params as any;
-    const receipts = mockReceipts.filter((r) => r.dealId === id);
+    const { id } = request.params as { id: string };
+    const transactions = await prisma.transaction.findMany({
+      where: { dealId: id },
+      include: transactionInclude,
+      orderBy: { createdAt: 'desc' },
+    });
 
-    return reply.send(successResponse({ items: receipts, total: receipts.length }, 'Receipts retrieved successfully'));
+    const receipts = transactions.map(transactionToReceipt);
+    return successResponse(reply, { items: receipts, total: receipts.length });
   });
 
-  // GET /api/receipts/:id
   fastify.get('/receipts/:id', async (request, reply) => {
-    const { id } = request.params as any;
-    const receipt = mockReceipts.find((r) => r.id === id);
+    const { id } = request.params as { id: string };
+    const transactionId = id.startsWith('receipt-') ? id.replace('receipt-', '') : id;
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: transactionInclude,
+    });
 
-    if (!receipt) {
+    if (!transaction) {
       return reply.status(404).send({
         error: {
           code: 'NOT_FOUND',
@@ -76,7 +137,7 @@ const transactions: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    return reply.send(successResponse(receipt, 'Receipt retrieved successfully'));
+    return successResponse(reply, transactionToReceipt(transaction));
   });
 };
 
