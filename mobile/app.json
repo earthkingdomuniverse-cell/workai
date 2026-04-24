@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SkillValue AI",
-    "slug": "skillvalue-ai",
+    "name": "WorkAI",
+    "slug": "workai",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -13,7 +13,7 @@
       "bundler": "metro"
     },
     "plugins": ["expo-router", "expo-font"],
-    "scheme": "skillvalue-ai",
+    "scheme": "workai",
     "experiments": {
       "typedRoutes": true
     }
