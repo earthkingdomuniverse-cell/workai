@@ -19,7 +19,71 @@ function parseEmbedData(raw: unknown): Record<string, any> {
   }
 }
 
+async function writePaymentAuditLog(input: {
+  provider: string;
+  providerRef?: string | null;
+  eventType: string;
+  status: string;
+  dealId?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  message?: string | null;
+  raw?: any;
+}) {
+  await prisma.paymentAuditLog.create({
+    data: {
+      provider: input.provider,
+      providerRef: input.providerRef || undefined,
+      eventType: input.eventType,
+      status: input.status,
+      dealId: input.dealId || undefined,
+      amount: input.amount || undefined,
+      currency: input.currency || undefined,
+      message: input.message || undefined,
+      raw: input.raw,
+    },
+  });
+}
+
 const payments: FastifyPluginAsync = async (fastify) => {
+  fastify.get('/payments/status', async (request, reply) => {
+    const query = request.query as Record<string, string | undefined>;
+
+    if (!query.provider || !query.providerRef) {
+      throw new AppError('provider and providerRef are required', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
+    }
+
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        provider: query.provider,
+        providerRef: query.providerRef,
+      },
+      include: {
+        deal: true,
+      },
+    });
+
+    if (!transaction) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Payment not found' } });
+    }
+
+    return {
+      provider: transaction.provider,
+      providerRef: transaction.providerRef,
+      status: transaction.status,
+      type: transaction.type,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      dealId: transaction.dealId,
+      dealStatus: transaction.deal.status,
+      createdAt: transaction.createdAt.toISOString(),
+      updatedAt: transaction.updatedAt.toISOString(),
+    };
+  });
+
   fastify.post('/payments/zalopay/create', async (request, reply) => {
     const body = request.body as any;
 
@@ -85,6 +149,18 @@ const payments: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    await writePaymentAuditLog({
+      provider: 'zalopay',
+      providerRef: result.providerRef,
+      eventType: 'create_payment',
+      status: 'pending',
+      dealId: body.dealId,
+      amount,
+      currency: 'VND',
+      message: 'ZaloPay payment created',
+      raw: result.raw,
+    });
+
     return {
       provider: result.provider,
       providerRef: result.providerRef,
@@ -98,6 +174,13 @@ const payments: FastifyPluginAsync = async (fastify) => {
     const key2 = process.env.ZALOPAY_KEY2;
 
     if (!key2) {
+      await writePaymentAuditLog({
+        provider: 'zalopay',
+        eventType: 'callback',
+        status: 'failed',
+        message: 'missing callback key',
+        raw: body,
+      });
       return { return_code: -1, return_message: 'missing callback key' };
     }
 
@@ -105,6 +188,13 @@ const payments: FastifyPluginAsync = async (fastify) => {
     const mac = body.mac;
 
     if (!dataStr || !mac || !verifyZaloMac(dataStr, mac, key2)) {
+      await writePaymentAuditLog({
+        provider: 'zalopay',
+        eventType: 'callback',
+        status: 'failed',
+        message: 'invalid mac',
+        raw: body,
+      });
       return { return_code: -1, return_message: 'invalid mac' };
     }
 
@@ -115,16 +205,49 @@ const payments: FastifyPluginAsync = async (fastify) => {
     const amount = Number(data.amount);
 
     if (!dealId || !providerRef || !amount) {
+      await writePaymentAuditLog({
+        provider: 'zalopay',
+        providerRef,
+        eventType: 'callback',
+        status: 'failed',
+        dealId,
+        amount,
+        currency: 'VND',
+        message: 'missing required payment data',
+        raw: data,
+      });
       return { return_code: 0, return_message: 'missing required payment data' };
     }
 
     const deal = await prisma.deal.findUnique({ where: { id: dealId } });
 
     if (!deal) {
+      await writePaymentAuditLog({
+        provider: 'zalopay',
+        providerRef,
+        eventType: 'callback',
+        status: 'failed',
+        dealId,
+        amount,
+        currency: 'VND',
+        message: 'deal not found',
+        raw: data,
+      });
       return { return_code: 0, return_message: 'deal not found' };
     }
 
     if (amount > deal.amount) {
+      await writePaymentAuditLog({
+        provider: 'zalopay',
+        providerRef,
+        eventType: 'callback',
+        status: 'failed',
+        dealId,
+        amount,
+        currency: 'VND',
+        message: 'amount exceeds deal amount',
+        raw: data,
+      });
       return { return_code: 0, return_message: 'amount exceeds deal amount' };
     }
 
@@ -138,6 +261,19 @@ const payments: FastifyPluginAsync = async (fastify) => {
       });
 
       if (existingCompleted) {
+        await tx.paymentAuditLog.create({
+          data: {
+            provider: 'zalopay',
+            providerRef,
+            eventType: 'callback_duplicate',
+            status: 'ignored',
+            dealId,
+            amount,
+            currency: 'VND',
+            message: 'duplicate completed callback ignored',
+            raw: data,
+          },
+        });
         return;
       }
 
@@ -179,6 +315,20 @@ const payments: FastifyPluginAsync = async (fastify) => {
         data: {
           status: 'funded',
           fundedAmount: amount,
+        },
+      });
+
+      await tx.paymentAuditLog.create({
+        data: {
+          provider: 'zalopay',
+          providerRef,
+          eventType: 'callback',
+          status: 'success',
+          dealId,
+          amount,
+          currency: 'VND',
+          message: 'payment completed and deal funded',
+          raw: data,
         },
       });
     });
