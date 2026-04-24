@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors, radius, spacing, typography } from '../../theme';
 import { useAuth } from '../../src/hooks/useAuth';
 import AccessDeniedState from '../../src/components/AccessDeniedState';
@@ -7,7 +8,31 @@ import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
 import { adminService, AdminOverview } from '../../src/services/adminService';
 
+const adminLinks = [
+  {
+    title: 'Disputes',
+    description: 'Resolve marketplace disputes',
+    route: '/admin/disputes',
+  },
+  {
+    title: 'Risk',
+    description: 'Review high-risk profiles',
+    route: '/admin/risk',
+  },
+  {
+    title: 'Fraud',
+    description: 'Inspect fraud signals',
+    route: '/admin/fraud',
+  },
+  {
+    title: 'Reviews',
+    description: 'Moderate flagged reviews',
+    route: '/admin/reviews',
+  },
+];
+
 export default function AdminOverviewScreen() {
+  const router = useRouter();
   const { isOperator } = useAuth();
   const [stats, setStats] = useState<AdminOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +128,21 @@ export default function AdminOverviewScreen() {
           <Text style={styles.statLabel}>Fraud Signals</Text>
         </View>
       </View>
+
+      <Text style={styles.sectionTitle}>Operator tools</Text>
+      <View style={styles.linksGrid}>
+        {adminLinks.map((link) => (
+          <TouchableOpacity
+            key={link.route}
+            style={styles.linkCard}
+            onPress={() => router.push(link.route as any)}
+          >
+            <Text style={styles.linkTitle}>{link.title}</Text>
+            <Text style={styles.linkDescription}>{link.description}</Text>
+            <Text style={styles.linkCta}>Open →</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -124,4 +164,14 @@ const styles = StyleSheet.create({
   },
   statValue: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   statLabel: { ...typography.body, color: colors.textSecondary },
+  sectionTitle: { ...typography.h2, color: colors.text, marginTop: spacing.lg, marginBottom: spacing.md },
+  linksGrid: { gap: spacing.md },
+  linkCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  linkTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  linkDescription: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm },
+  linkCta: { ...typography.body, color: colors.primary, fontWeight: '700' },
 });
