@@ -1,5 +1,28 @@
+import { prisma } from '../../lib/prisma';
 import { Proposal, ProposalFilter, ProposalInput } from './types';
-import { mockProposals } from '../../mocks/proposals';
+
+function toProposal(row: any): Proposal {
+  return {
+    id: row.id,
+    requestId: row.requestId ?? undefined,
+    offerId: row.offerId ?? undefined,
+    providerId: row.providerId,
+    clientId: row.clientId,
+    status: row.status,
+    title: row.title,
+    message: row.message,
+    proposedAmount: row.proposedAmount,
+    currency: row.currency,
+    estimatedDeliveryDays: row.estimatedDeliveryDays,
+    revisions: row.revisions,
+    attachments: [],
+    milestones: [],
+    views: 0,
+    likedByClient: false,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 export interface ProposalRepository {
   findAll(filters?: ProposalFilter): Promise<Proposal[]>;
@@ -15,156 +38,104 @@ export interface ProposalRepository {
   incrementViews(id: string): Promise<void>;
 }
 
-class InMemoryProposalRepository implements ProposalRepository {
-  private proposals: Proposal[] = [...mockProposals];
-
+class PrismaProposalRepository implements ProposalRepository {
   async findAll(filters?: ProposalFilter): Promise<Proposal[]> {
-    let result = [...this.proposals];
+    const where: any = {};
 
-    if (filters) {
-      const {
-        requestId,
-        offerId,
-        providerId,
-        clientId,
-        status,
-        sortBy = 'createdAt',
-        sortOrder = 'desc',
-      } = filters;
+    if (filters?.requestId) where.requestId = filters.requestId;
+    if (filters?.offerId) where.offerId = filters.offerId;
+    if (filters?.providerId) where.providerId = filters.providerId;
+    if (filters?.clientId) where.clientId = filters.clientId;
+    if (filters?.status) where.status = filters.status;
 
-      if (requestId) {
-        result = result.filter((p) => p.requestId === requestId);
-      }
+    const orderBy =
+      filters?.sortBy === 'amount'
+        ? { proposedAmount: filters.sortOrder || 'desc' }
+        : { createdAt: filters?.sortOrder || 'desc' };
 
-      if (offerId) {
-        result = result.filter((p) => p.offerId === offerId);
-      }
+    const rows = await prisma.proposal.findMany({
+      where,
+      orderBy,
+      skip: filters?.page && filters?.limit ? (filters.page - 1) * filters.limit : undefined,
+      take: filters?.limit,
+    });
 
-      if (providerId) {
-        result = result.filter((p) => p.providerId === providerId);
-      }
-
-      if (clientId) {
-        result = result.filter((p) => p.clientId === clientId);
-      }
-
-      if (status) {
-        result = result.filter((p) => p.status === status);
-      }
-
-      // Sort
-      const sorted = [...result].sort((a, b) => {
-        let compare = 0;
-        switch (sortBy) {
-          case 'amount':
-            compare = a.proposedAmount - b.proposedAmount;
-            break;
-          case 'createdAt':
-          default:
-            compare = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            break;
-        }
-        return sortOrder === 'asc' ? compare : -compare;
-      });
-
-      result = sorted;
-    }
-
-    return result;
+    return rows.map(toProposal);
   }
 
   async findById(id: string): Promise<Proposal | null> {
-    return this.proposals.find((p) => p.id === id) || null;
+    const row = await prisma.proposal.findUnique({ where: { id } });
+    return row ? toProposal(row) : null;
   }
 
   async findByRequestId(requestId: string): Promise<Proposal[]> {
-    return this.proposals.filter((p) => p.requestId === requestId);
+    const rows = await prisma.proposal.findMany({ where: { requestId } });
+    return rows.map(toProposal);
   }
 
   async findByOfferId(offerId: string): Promise<Proposal[]> {
-    return this.proposals.filter((p) => p.offerId === offerId);
+    const rows = await prisma.proposal.findMany({ where: { offerId } });
+    return rows.map(toProposal);
   }
 
   async findByProviderId(providerId: string): Promise<Proposal[]> {
-    return this.proposals.filter((p) => p.providerId === providerId);
+    const rows = await prisma.proposal.findMany({ where: { providerId } });
+    return rows.map(toProposal);
   }
 
   async findByClientId(clientId: string): Promise<Proposal[]> {
-    return this.proposals.filter((p) => p.clientId === clientId);
+    const rows = await prisma.proposal.findMany({ where: { clientId } });
+    return rows.map(toProposal);
   }
 
   async create(data: ProposalInput & { providerId: string; clientId: string }): Promise<Proposal> {
-    const proposal: Proposal = {
-      id: `proposal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      requestId: data.requestId,
-      offerId: data.offerId,
-      providerId: data.providerId,
-      clientId: data.clientId,
-      status: 'pending',
-      title: data.title,
-      message: data.message,
-      proposedAmount: data.proposedAmount,
-      currency: data.currency || 'USD',
-      estimatedDeliveryDays: data.estimatedDeliveryDays,
-      revisions: data.revisions,
-      attachments: data.attachments,
-      milestones: data.milestones,
-      views: 0,
-      likedByClient: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const row = await prisma.proposal.create({
+      data: {
+        requestId: data.requestId,
+        offerId: data.offerId,
+        providerId: data.providerId,
+        clientId: data.clientId,
+        title: data.title,
+        message: data.message,
+        proposedAmount: data.proposedAmount,
+        currency: data.currency || 'USD',
+        estimatedDeliveryDays: data.estimatedDeliveryDays,
+        revisions: data.revisions || 1,
+        status: 'pending',
+      },
+    });
 
-    this.proposals.push(proposal);
-    return proposal;
+    return toProposal(row);
   }
 
   async update(id: string, data: Partial<ProposalInput>): Promise<Proposal> {
-    const index = this.proposals.findIndex((p) => p.id === id);
-    if (index === -1) {
-      throw new Error(`Proposal ${id} not found`);
-    }
+    const row = await prisma.proposal.update({
+      where: { id },
+      data: {
+        title: data.title,
+        message: data.message,
+        proposedAmount: data.proposedAmount,
+        currency: data.currency,
+        estimatedDeliveryDays: data.estimatedDeliveryDays,
+        revisions: data.revisions,
+      },
+    });
 
-    const updated: Proposal = {
-      ...this.proposals[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.proposals[index] = updated;
-    return updated;
+    return toProposal(row);
   }
 
   async updateStatus(id: string, status: Proposal['status']): Promise<Proposal> {
-    const index = this.proposals.findIndex((p) => p.id === id);
-    if (index === -1) {
-      throw new Error(`Proposal ${id} not found`);
-    }
-
-    const updated: Proposal = {
-      ...this.proposals[index],
-      status,
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.proposals[index] = updated;
-    return updated;
+    const row = await prisma.proposal.update({ where: { id }, data: { status } });
+    return toProposal(row);
   }
 
   async delete(id: string): Promise<void> {
-    const index = this.proposals.findIndex((p) => p.id === id);
-    if (index === -1) {
-      throw new Error(`Proposal ${id} not found`);
-    }
-    this.proposals.splice(index, 1);
+    await prisma.proposal.delete({ where: { id } });
   }
 
-  async incrementViews(id: string): Promise<void> {
-    const proposal = await this.findById(id);
-    if (!proposal) return;
-    proposal.views += 1;
-    proposal.updatedAt = new Date().toISOString();
+  async incrementViews(_id: string): Promise<void> {
+    // Views are not persisted in the first production schema version.
   }
 }
 
-export const proposalRepository: ProposalRepository = new InMemoryProposalRepository();
+export const proposalRepository: ProposalRepository = new PrismaProposalRepository();
