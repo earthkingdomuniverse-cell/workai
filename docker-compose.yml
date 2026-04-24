@@ -1,32 +1,74 @@
-version: '3.9'
-
 services:
-  db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: workai
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-workai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workai_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-workai}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   api:
     build: .
+    restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3000
       HOST: 0.0.0.0
-      DATABASE_URL: postgres://postgres:postgres@db:5432/workai
-      JWT_SECRET: change_this_super_secret_key_please_123456
-      CORS_ORIGIN: http://localhost:3000
-    ports:
-      - "3000:3000"
+      APP_NAME: ${APP_NAME:-WorkAI}
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost}
+      DATABASE_URL: postgres://${POSTGRES_USER:-workai}:${POSTGRES_PASSWORD:-workai_local_password}@db:5432/${POSTGRES_DB:-workai}
+      JWT_SECRET: ${JWT_SECRET:-change_this_local_only_workai_secret_32_chars}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://127.0.0.1}
+      ENABLE_MOCK_MODE: ${ENABLE_MOCK_MODE:-false}
+      ENABLE_ADMIN_TAB: ${ENABLE_ADMIN_TAB:-false}
+      ENABLE_SWAGGER: ${ENABLE_SWAGGER:-false}
+      ZALOPAY_APP_ID: ${ZALOPAY_APP_ID:-}
+      ZALOPAY_KEY1: ${ZALOPAY_KEY1:-}
+      ZALOPAY_KEY2: ${ZALOPAY_KEY2:-}
+      ZALOPAY_CALLBACK_URL: ${ZALOPAY_CALLBACK_URL:-}
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:-}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}
+      MOMO_REDIRECT_URL: ${MOMO_REDIRECT_URL:-}
+      MOMO_IPN_URL: ${MOMO_IPN_URL:-}
+      PLATFORM_WALLET_USER_ID: ${PLATFORM_WALLET_USER_ID:-platform}
+    expose:
+      - "3000"
     command: sh -c "npx prisma migrate deploy && node dist/server.js"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
