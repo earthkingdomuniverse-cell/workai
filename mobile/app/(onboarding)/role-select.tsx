@@ -4,50 +4,47 @@ import { useRouter } from 'expo-router';
 import { theme } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { PageTitle } from '../../components/PageTitle';
-import { useAuthStore } from '../../src/store/auth-store';
 import { useOnboardingStore } from '../../src/store/onboarding-store';
 
-type RoleOption = 'member' | 'operator' | 'admin';
+type IntentOption = 'provider' | 'requester' | 'both';
 
-const roles: { key: RoleOption; label: string; description: string; icon: string }[] = [
+const intents: { key: IntentOption; label: string; description: string; icon: string }[] = [
   {
-    key: 'member',
-    label: 'Member',
-    description: 'I want to offer services and grow my career',
-    icon: '👤',
+    key: 'provider',
+    label: 'Offer my skills',
+    description: 'I want to create offers, receive proposals, and earn through my skills.',
+    icon: '💼',
   },
   {
-    key: 'operator',
-    label: 'Operator',
-    description: 'I want to manage and moderate the platform',
-    icon: '⚙️',
+    key: 'requester',
+    label: 'Find skilled help',
+    description: 'I want to post requests, compare providers, and get work done.',
+    icon: '🔎',
   },
   {
-    key: 'admin',
-    label: 'Admin',
-    description: 'I want full administrative access',
-    icon: '🔐',
+    key: 'both',
+    label: 'Both',
+    description: 'I want to offer skills and also find help for my own projects.',
+    icon: '🤝',
   },
 ];
 
 export default function RoleSelectScreen() {
   const router = useRouter();
-  const authUser = useAuthStore((state) => state.user);
-  const { role, setRole } = useOnboardingStore();
-  const [selectedRole, setSelectedRole] = useState<RoleOption | null>(
-    (role || authUser?.role || null) as RoleOption | null,
-  );
+  const { setRole, setGoals } = useOnboardingStore();
+  const [selectedIntent, setSelectedIntent] = useState<IntentOption | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
-    if (!selectedRole) return;
+    if (!selectedIntent) return;
 
     setLoading(true);
     try {
-      setRole(selectedRole);
+      setRole('member');
+      setGoals([selectedIntent]);
       router.push('/(onboarding)/profile-setup');
     } catch (error) {
-      console.error('Error saving role:', error);
+      console.error('Error saving onboarding intent:', error);
     } finally {
       setLoading(false);
     }
@@ -56,24 +53,21 @@ export default function RoleSelectScreen() {
   return (
     <View style={styles.container}>
       <PageTitle
-        title="Choose Your Role"
-        subtitle="Select the role that best describes you"
+        title="What do you want to do?"
+        subtitle="This customizes your first WorkAI experience. Admin and operator access must be granted separately."
         size="lg"
       />
 
       <View style={styles.roles}>
-        {roles.map((role) => (
+        {intents.map((intent) => (
           <TouchableOpacity
-            key={role.key}
-            style={[styles.roleCard, selectedRole === role.key && styles.roleCardSelected]}
-            onPress={() => {
-              setSelectedRole(role.key);
-              setRole(role.key);
-            }}
+            key={intent.key}
+            style={[styles.roleCard, selectedIntent === intent.key && styles.roleCardSelected]}
+            onPress={() => setSelectedIntent(intent.key)}
           >
-            <Text style={styles.roleIcon}>{role.icon}</Text>
-            <Text style={styles.roleLabel}>{role.label}</Text>
-            <Text style={styles.roleDescription}>{role.description}</Text>
+            <Text style={styles.roleIcon}>{intent.icon}</Text>
+            <Text style={styles.roleLabel}>{intent.label}</Text>
+            <Text style={styles.roleDescription}>{intent.description}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -82,7 +76,7 @@ export default function RoleSelectScreen() {
         <PrimaryButton
           title="Continue"
           onPress={handleContinue}
-          disabled={!selectedRole}
+          disabled={!selectedIntent}
           loading={loading}
           fullWidth
           size="lg"
