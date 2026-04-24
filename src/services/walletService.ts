@@ -2,10 +2,23 @@ import { prisma } from '../lib/prisma';
 
 export type WalletEntryType = 'deposit' | 'hold' | 'release' | 'refund' | 'fee' | 'withdrawal';
 
+const PLATFORM_WALLET_USER_ID = process.env.PLATFORM_WALLET_USER_ID || 'platform';
+
 async function getOrCreateWallet(tx: any, userId: string, currency = 'VND') {
   const existing = await tx.wallet.findUnique({ where: { userId } });
 
   if (existing) return existing;
+
+  await tx.user.upsert({
+    where: { id: userId },
+    update: {},
+    create: {
+      id: userId,
+      email: `${userId}@system.local`,
+      passwordHash: 'system',
+      role: userId === PLATFORM_WALLET_USER_ID ? 'platform' : 'member',
+    },
+  });
 
   return tx.wallet.create({
     data: {
@@ -41,9 +54,7 @@ export const walletService = {
     idempotencyKey: string;
   }) {
     return prisma.$transaction(async (tx) => {
-      const existing = await tx.walletLedgerEntry.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
-      });
+      const existing = await tx.walletLedgerEntry.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
       if (existing) return existing;
 
       const wallet = await getOrCreateWallet(tx, input.userId, input.currency || 'VND');
@@ -52,10 +63,7 @@ export const walletService = {
 
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
-        data: {
-          available: balanceAfter,
-          lifetimeIn: wallet.lifetimeIn + input.amount,
-        },
+        data: { available: balanceAfter, lifetimeIn: wallet.lifetimeIn + input.amount },
       });
 
       return tx.walletLedgerEntry.create({
@@ -90,28 +98,17 @@ export const walletService = {
     description?: string;
   }) {
     return prisma.$transaction(async (tx) => {
-      const existing = await tx.walletLedgerEntry.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
-      });
+      const existing = await tx.walletLedgerEntry.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
       if (existing) return existing;
 
       const wallet = await getOrCreateWallet(tx, input.userId, input.currency || 'VND');
-
-      if (wallet.available < input.amount) {
-        throw new Error('INSUFFICIENT_FUNDS');
-      }
+      if (wallet.available < input.amount) throw new Error('INSUFFICIENT_FUNDS');
 
       const balanceBefore = wallet.available;
       const heldBefore = wallet.held;
-      const balanceAfter = wallet.available - input.amount;
-      const heldAfter = wallet.held + input.amount;
-
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
-        data: {
-          available: balanceAfter,
-          held: heldAfter,
-        },
+        data: { available: wallet.available - input.amount, held: wallet.held + input.amount },
       });
 
       return tx.walletLedgerEntry.create({
@@ -144,37 +141,29 @@ export const walletService = {
     idempotencyKey: string;
   }) {
     return prisma.$transaction(async (tx) => {
-      const existing = await tx.walletLedgerEntry.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
-      });
+      const existing = await tx.walletLedgerEntry.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
       if (existing) return existing;
 
       const clientWallet = await getOrCreateWallet(tx, input.clientId, input.currency || 'VND');
       const providerWallet = await getOrCreateWallet(tx, input.providerId, input.currency || 'VND');
-      const feeAmount = input.feeAmount || 0;
+      const platformWallet = await getOrCreateWallet(tx, PLATFORM_WALLET_USER_ID, input.currency || 'VND');
+      const feeAmount = Math.max(0, input.feeAmount || 0);
       const providerAmount = input.amount - feeAmount;
 
-      if (clientWallet.held < input.amount) {
-        throw new Error('INSUFFICIENT_HELD_FUNDS');
-      }
+      if (providerAmount < 0) throw new Error('INVALID_FEE_AMOUNT');
+      if (clientWallet.held < input.amount) throw new Error('INSUFFICIENT_HELD_FUNDS');
 
       await tx.wallet.update({
         where: { id: clientWallet.id },
-        data: {
-          held: clientWallet.held - input.amount,
-          lifetimeOut: clientWallet.lifetimeOut + input.amount,
-        },
+        data: { held: clientWallet.held - input.amount, lifetimeOut: clientWallet.lifetimeOut + input.amount },
       });
 
       const updatedProviderWallet = await tx.wallet.update({
         where: { id: providerWallet.id },
-        data: {
-          available: providerWallet.available + providerAmount,
-          lifetimeIn: providerWallet.lifetimeIn + providerAmount,
-        },
+        data: { available: providerWallet.available + providerAmount, lifetimeIn: providerWallet.lifetimeIn + providerAmount },
       });
 
-      return tx.walletLedgerEntry.create({
+      const providerLedger = await tx.walletLedgerEntry.create({
         data: {
           walletId: providerWallet.id,
           userId: input.providerId,
@@ -192,6 +181,34 @@ export const walletService = {
           metadata: { feeAmount },
         },
       });
+
+      if (feeAmount > 0) {
+        const updatedPlatformWallet = await tx.wallet.update({
+          where: { id: platformWallet.id },
+          data: { available: platformWallet.available + feeAmount, lifetimeIn: platformWallet.lifetimeIn + feeAmount },
+        });
+
+        await tx.walletLedgerEntry.create({
+          data: {
+            walletId: platformWallet.id,
+            userId: PLATFORM_WALLET_USER_ID,
+            type: 'fee',
+            direction: 'credit',
+            amount: feeAmount,
+            currency: input.currency || platformWallet.currency,
+            balanceBefore: platformWallet.available,
+            balanceAfter: updatedPlatformWallet.available,
+            heldBefore: platformWallet.held,
+            heldAfter: updatedPlatformWallet.held,
+            dealId: input.dealId,
+            idempotencyKey: `${input.idempotencyKey}:fee`,
+            description: `Platform fee from deal ${input.dealId}`,
+            metadata: { providerAmount },
+          },
+        });
+      }
+
+      return providerLedger;
     });
   },
 };
