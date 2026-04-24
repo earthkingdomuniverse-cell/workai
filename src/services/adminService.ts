@@ -6,11 +6,10 @@ import {
   ReviewModeration,
   RiskProfile,
 } from '../types/admin';
-import { mockReviews } from '../mocks/reviews';
-import { mockUsers } from '../mocks/users';
+import { prisma } from '../db/prismaClient';
+import { NotFoundError, BadRequestError } from '../lib/errors';
 
-const adminDeals = [{ id: 'deal_1' }, { id: 'deal_2' }, { id: 'deal_3' }];
-
+// Inline mock for disputes since it's not in Prisma schema yet
 const mockDisputes: Dispute[] = [
   {
     id: 'dispute_1',
@@ -54,17 +53,23 @@ export interface AdminService {
 
 class AdminServiceImpl implements AdminService {
   async getOverview(): Promise<AdminOverview> {
+    const totalUsers = await prisma.user.count();
+    const totalDeals = await prisma.deal.count();
+    const totalOffers = await prisma.offer.count();
+    const totalRequests = await prisma.request.count();
+    const pendingReviews = await prisma.review.count({ where: { status: 'pending' } });
+
     return {
       stats: {
-        totalUsers: mockUsers.length,
-        totalDeals: adminDeals.length,
-        totalOffers: 0,
-        totalRequests: 0,
+        totalUsers,
+        totalDeals,
+        totalOffers,
+        totalRequests,
         totalProposals: 0,
         activeDisputes: mockDisputes.filter(
           (item) => item.status === 'open' || item.status === 'under_review',
         ).length,
-        pendingReviews: mockReviews.filter((item) => item.status === 'pending').length,
+        pendingReviews,
         newUsersToday: 12,
         revenueToday: 2450,
         avgDealSize: 3500,
@@ -93,7 +98,8 @@ class AdminServiceImpl implements AdminService {
   }
 
   async getRiskProfiles(): Promise<RiskProfile[]> {
-    return mockUsers.map((user) => {
+    const users = await prisma.user.findMany();
+    return users.map((user) => {
       const riskScore = user.trustScore ? Math.max(0, 100 - user.trustScore) : 50;
       return {
         userId: user.id,
@@ -135,24 +141,23 @@ class AdminServiceImpl implements AdminService {
   }
 
   async getPendingReviews(): Promise<ReviewModeration[]> {
-    return mockReviews
-      .filter((item) => item.status === 'pending')
-      .map((item) => ({
-        id: `moderation_${item.id}`,
-        reviewId: item.id,
-        reviewerId: item.reviewerId,
-        subjectId: item.subjectId,
-        content: item.comment,
-        rating: item.rating,
-        status: 'pending',
-        flags: [],
-        createdAt: item.createdAt,
-      }));
+    const reviews = await prisma.review.findMany({ where: { status: 'pending' } });
+    return reviews.map((item) => ({
+      id: `moderation_${item.id}`,
+      reviewId: item.id,
+      reviewerId: item.reviewerId,
+      subjectId: item.subjectId,
+      content: item.comment,
+      rating: item.rating,
+      status: 'pending',
+      flags: [],
+      createdAt: item.createdAt instanceof Date ? item.createdAt.toISOString() : String(item.createdAt),
+    }));
   }
 
   async resolveDispute(id: string, resolution: string, resolvedBy: string): Promise<Dispute> {
     const dispute = (mockDisputes as any[]).find((item) => item.id === id);
-    if (!dispute) throw new Error('Dispute not found');
+    if (!dispute) throw new NotFoundError('Dispute not found');
     dispute.status = 'resolved';
     dispute.resolution = resolution;
     dispute.resolvedBy = resolvedBy;
@@ -167,9 +172,9 @@ class AdminServiceImpl implements AdminService {
     processedBy: string,
   ): Promise<Dispute> {
     const dispute = (mockDisputes as any[]).find((item) => item.id === id);
-    if (!dispute) throw new Error('Dispute not found');
+    if (!dispute) throw new NotFoundError('Dispute not found');
     if (dispute.status !== 'open' && dispute.status !== 'under_review') {
-      throw new Error('Dispute is already closed');
+      throw new BadRequestError('Dispute is already closed');
     }
 
     dispute.status = action === 'resolve' ? 'resolved' : 'rejected';
@@ -177,24 +182,22 @@ class AdminServiceImpl implements AdminService {
     dispute.resolvedBy = processedBy;
     dispute.resolvedAt = new Date().toISOString();
 
-    // Logic hoàn tiền / phân bổ quỹ (mock)
     if (action === 'resolve') {
-      console.log(
-        `[Admin] Disputed Resolved: Hoàn tiền (Refund) cho Client của Deal ${dispute.dealId}`,
-      );
+      console.log(`[Admin] Disputed Resolved: Hoàn tiền (Refund) cho Client của Deal ${dispute.dealId}`);
     } else {
-      console.log(
-        `[Admin] Disputed Rejected: Giải phóng quỹ (Release Funds) cho Provider của Deal ${dispute.dealId}`,
-      );
+      console.log(`[Admin] Disputed Rejected: Giải phóng quỹ (Release Funds) cho Provider của Deal ${dispute.dealId}`);
     }
 
     return dispute as Dispute;
   }
 
   async flagReview(reviewId: string, flags: any[], _flaggedBy: string): Promise<ReviewModeration> {
-    const review = mockReviews.find((item) => item.id === reviewId);
-    if (!review) throw new Error('Review not found');
-    review.status = 'flagged';
+    const review = await prisma.review.update({
+      where: { id: reviewId },
+      data: { status: 'flagged' }
+    });
+    if (!review) throw new NotFoundError('Review not found');
+
     return {
       id: `moderation_${review.id}`,
       reviewId: review.id,
@@ -204,7 +207,7 @@ class AdminServiceImpl implements AdminService {
       rating: review.rating,
       status: 'flagged',
       flags,
-      createdAt: review.createdAt,
+      createdAt: review.createdAt instanceof Date ? review.createdAt.toISOString() : String(review.createdAt),
     };
   }
 
@@ -240,10 +243,13 @@ class AdminServiceImpl implements AdminService {
     note: string,
     performedBy: string,
   ): Promise<Record<string, any>> {
-    const review = mockReviews.find((item) => item.id === reviewId);
-    if (!review) throw new Error('Review not found');
-    review.status =
-      action === 'approve_release' ? 'approved' : action === 'refund_client' ? 'refunded' : 'held';
+    const status = action === 'approve_release' ? 'approved' : action === 'refund_client' ? 'refunded' : 'held';
+    const review = await prisma.review.update({
+      where: { id: reviewId },
+      data: { status }
+    });
+    if (!review) throw new NotFoundError('Review not found');
+
     return {
       reviewId,
       action,
@@ -257,7 +263,7 @@ class AdminServiceImpl implements AdminService {
   async getUserRiskProfile(userId: string): Promise<RiskProfile> {
     const all = await this.getRiskProfiles();
     const profile = all.find((item) => item.userId === userId);
-    if (!profile) throw new Error('User risk profile not found');
+    if (!profile) throw new NotFoundError('User risk profile not found');
     return profile;
   }
 

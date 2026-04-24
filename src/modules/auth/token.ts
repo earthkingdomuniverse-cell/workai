@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { AuthenticationError } from '../../lib/errors';
 import { config } from '../../config';
 import { TokenPayload, RefreshTokenPayload } from './types';
 
@@ -25,7 +26,7 @@ export async function verifyAccessToken(token: string): Promise<TokenPayload> {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload as unknown as TokenPayload;
   } catch (error) {
-    throw new Error('Invalid or expired access token');
+    throw new AuthenticationError('Invalid or expired token');
   }
 }
 
@@ -34,7 +35,7 @@ export async function verifyRefreshToken(token: string): Promise<RefreshTokenPay
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload as unknown as RefreshTokenPayload;
   } catch (error) {
-    throw new Error('Invalid or expired refresh token');
+    throw new AuthenticationError('Invalid or expired refresh token');
   }
 }
 

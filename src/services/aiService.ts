@@ -1,9 +1,10 @@
 import { AiMatchInput, AiMatchOutput, AiRecommendation } from '../types/ai';
 import { SupportTicketInput, SupportTicketOutput } from '../types/support';
-import { mockOffers } from '../mocks/offers';
+import { prisma } from '../db/prismaClient';
 import { aiSupportService } from './aiSupportService';
 import { OpenAI } from 'openai';
 import * as dotenv from 'dotenv';
+import { BadRequestError } from '../lib/errors';
 
 dotenv.config();
 
@@ -35,10 +36,21 @@ export interface AiService {
 class AiServiceImpl implements AiService {
   async match(input: AiMatchInput): Promise<AiMatchOutput> {
     const normalizedSkills = input.skills.map((skill) => skill.toLowerCase());
+    
+    // Fetch offers from database instead of mock data
+    const offers = await prisma.offer.findMany({
+      where: { status: 'active' },
+      take: 50 // Limit to avoid memory issues with large datasets
+    });
 
-    const recommendations = mockOffers
+    const recommendations = offers
       .map<AiRecommendation>((offer) => {
-        const matchedSkills = (offer.skills || []).filter((skill) =>
+        let offerSkills: string[] = [];
+        try {
+          if (offer.skills) offerSkills = JSON.parse(offer.skills);
+        } catch(e) {}
+        
+        const matchedSkills = offerSkills.filter((skill) =>
           normalizedSkills.some((candidate) => skill.toLowerCase().includes(candidate)),
         );
 
@@ -89,10 +101,10 @@ class AiServiceImpl implements AiService {
           ],
           entityId: offer.id,
           entity: offer,
-          tags: offer.skills || [],
+          tags: offerSkills,
           price: offer.price,
           currency: offer.currency,
-          deliveryTime: offer.deliveryTime,
+          deliveryTime: offer.deliveryTime || 0,
         };
       })
       .filter((item) => item.score > 20)
@@ -140,7 +152,7 @@ Output ONLY valid JSON, without any markdown formatting like \`\`\`json.`;
       if (parsed.suggested_price) {
         return parsed as PriceSuggestionOutput;
       }
-      throw new Error('Invalid AI JSON format');
+      throw new BadRequestError('Invalid AI JSON format');
     } catch (err: any) {
       console.error('NVIDIA AI Price Error, falling back to heuristics:', err.message);
       const skillWeight = input.skills.length * 120;

@@ -1,5 +1,5 @@
 import { Profile, OnboardingState, Skill, Goal } from './types';
-
+import { NotFoundError } from '../../lib/errors';
 interface ProfileRecord extends Profile {
   userId: string;
 }
@@ -51,7 +51,7 @@ class InMemoryProfileRepository implements ProfileRepository {
   async update(userId: string, data: Partial<Profile>): Promise<Profile> {
     const existing = await this.findByUserId(userId);
     if (!existing) {
-      throw new Error(`Profile for user ${userId} not found`);
+      throw new NotFoundError(`Profile for user ${userId} not found`);
     }
 
     const updated: ProfileRecord = {
@@ -93,7 +93,7 @@ class InMemoryProfileRepository implements ProfileRepository {
   async updateOnboarding(userId: string, data: Partial<OnboardingState>): Promise<OnboardingState> {
     const existing = await this.findOnboardingByUserId(userId);
     if (!existing) {
-      throw new Error(`Onboarding for user ${userId} not found`);
+      throw new NotFoundError(`Onboarding for user ${userId} not found`);
     }
 
     const updated: OnboardingRecord = {
@@ -109,7 +109,7 @@ class InMemoryProfileRepository implements ProfileRepository {
   async completeOnboarding(userId: string): Promise<OnboardingState> {
     const existing = await this.findOnboardingByUserId(userId);
     if (!existing) {
-      throw new Error(`Onboarding for user ${userId} not found`);
+      throw new NotFoundError(`Onboarding for user ${userId} not found`);
     }
 
     const completed: OnboardingRecord = {

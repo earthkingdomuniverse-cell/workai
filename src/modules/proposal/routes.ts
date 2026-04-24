@@ -4,8 +4,7 @@ import { createProposalSchema, proposalFilterSchema, updateProposalSchema } from
 import { authenticate } from '../../lib/auth';
 import { successResponse, createdResponse } from '../../lib/response';
 import { AppError } from '../../lib/errors';
-import { getRequestById } from '../../mocks/requests';
-import { getOfferById } from '../../mocks/offers';
+import { prisma } from '../../db/prismaClient';
 
 async function requireProposalUser(request: any, reply: any) {
   const user = await authenticate(request, reply);
@@ -133,7 +132,7 @@ const proposalRoutes: FastifyPluginAsync = async (fastify) => {
       let receiverUserId: string | undefined;
 
       if (body.requestId) {
-        const requestRecord = getRequestById(body.requestId);
+        const requestRecord = await prisma.request.findUnique({ where: { id: body.requestId } });
         if (!requestRecord) {
           throw new AppError('Request not found for proposal', {
             code: 'NOT_FOUND',
@@ -144,7 +143,7 @@ const proposalRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       if (!receiverUserId && body.offerId) {
-        const offerRecord = getOfferById(body.offerId);
+        const offerRecord = await prisma.offer.findUnique({ where: { id: body.offerId } });
         if (!offerRecord) {
           throw new AppError('Offer not found for proposal', {
             code: 'NOT_FOUND',

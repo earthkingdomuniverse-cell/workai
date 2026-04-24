@@ -1,5 +1,6 @@
 import { Request, RequestInput, RequestFilter } from './types';
 import { mockRequests } from '../../mocks/requests';
+import { NotFoundError } from '../../lib/errors';
 
 export interface RequestRepository {
   findAll(filters?: RequestFilter): Promise<Request[]>;
@@ -146,7 +147,7 @@ class InMemoryRequestRepository implements RequestRepository {
   async update(id: string, data: Partial<RequestInput>): Promise<Request> {
     const index = this.requests.findIndex((r) => r.id === id);
     if (index === -1) {
-      throw new Error(`Request ${id} not found`);
+      throw new NotFoundError(`Request ${id} not found`);
     }
 
     const updated: Request = {
@@ -162,7 +163,7 @@ class InMemoryRequestRepository implements RequestRepository {
   async delete(id: string): Promise<void> {
     const index = this.requests.findIndex((r) => r.id === id);
     if (index === -1) {
-      throw new Error(`Request ${id} not found`);
+      throw new NotFoundError(`Request ${id} not found`);
     }
     this.requests.splice(index, 1);
   }

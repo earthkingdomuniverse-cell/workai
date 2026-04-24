@@ -1,5 +1,6 @@
 import { Transaction, Receipt } from '../types/transaction';
-import { mockTransactions, mockReceipts } from '../mocks/transactions';
+import { prisma } from '../db/prismaClient';
+import { NotFoundError } from '../lib/errors';
 
 export interface PaymentService {
   getTransactions(filters?: any): Promise<Transaction[]>;
@@ -17,68 +18,93 @@ export interface PaymentService {
   deleteReceipt(id: string): Promise<void>;
 }
 
+// Simple in-memory mock for receipts since they are not in DB schema yet
+const mockReceipts: Receipt[] = [];
+
 class PaymentServiceImpl implements PaymentService {
   async getTransactions(_filters?: any): Promise<Transaction[]> {
-    // In a real implementation, this would query a database
-    return mockTransactions;
+    const txns = await prisma.transaction.findMany();
+    return txns.map(t => ({
+      ...t,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    })) as unknown as Transaction[];
   }
 
   async getTransactionById(id: string): Promise<Transaction | null> {
-    const transaction = mockTransactions.find((t) => t.id === id);
-    return transaction || null;
+    const t = await prisma.transaction.findUnique({ where: { id }});
+    if (!t) return null;
+    return {
+      ...t,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    } as unknown as Transaction;
   }
 
   async getTransactionsByUserId(userId: string): Promise<Transaction[]> {
-    return mockTransactions.filter((t) => t.userId === userId);
+    const txns = await prisma.transaction.findMany({ where: { userId } });
+    return txns.map(t => ({
+      ...t,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    })) as unknown as Transaction[];
   }
 
   async getTransactionsByDealId(dealId: string): Promise<Transaction[]> {
-    return mockTransactions.filter((t) => t.dealId === dealId);
+    const txns = await prisma.transaction.findMany({ where: { dealId } });
+    return txns.map(t => ({
+      ...t,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    })) as unknown as Transaction[];
   }
 
   async createTransaction(data: any): Promise<Transaction> {
-    // In a real implementation, this would insert into a database
-    const transaction: Transaction = {
-      id: `txn_${Date.now()}`,
-      dealId: data.dealId,
-      amount: data.amount,
-      currency: data.currency,
-      type: data.type,
-      status: 'pending',
-      referenceNumber: `ref_${Date.now()}`,
-      userId: data.userId,
-      userName: data.userName,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const t = await prisma.transaction.create({
+      data: {
+        dealId: data.dealId,
+        amount: data.amount,
+        currency: data.currency || 'USD',
+        type: data.type,
+        status: data.status || 'pending',
+        referenceNumber: data.referenceNumber || `ref_${Date.now()}`,
+        userId: data.userId,
+        userName: data.userName,
+        description: data.description,
+        paymentMethod: data.paymentMethod,
+        receiptId: data.receiptId,
+      }
+    });
 
-    mockTransactions.push(transaction);
-    return transaction;
+    return {
+      ...t,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    } as unknown as Transaction;
   }
 
   async updateTransaction(id: string, data: any): Promise<Transaction> {
-    const index = mockTransactions.findIndex((t) => t.id === id);
-    if (index === -1) {
-      throw new Error(`Transaction ${id} not found`);
+    try {
+      const t = await prisma.transaction.update({
+        where: { id },
+        data
+      });
+      return {
+        ...t,
+        createdAt: t.createdAt.toISOString(),
+        updatedAt: t.updatedAt.toISOString(),
+      } as unknown as Transaction;
+    } catch(e) {
+      throw new NotFoundError(`Transaction ${id} not found`);
     }
-
-    const updated = {
-      ...mockTransactions[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-
-    mockTransactions[index] = updated;
-    return updated;
   }
 
   async deleteTransaction(id: string): Promise<void> {
-    const index = mockTransactions.findIndex((t) => t.id === id);
-    if (index === -1) {
-      throw new Error(`Transaction ${id} not found`);
+    try {
+      await prisma.transaction.delete({ where: { id }});
+    } catch(e) {
+      throw new NotFoundError(`Transaction ${id} not found`);
     }
-
-    mockTransactions.splice(index, 1);
   }
 
   async getReceipts(_filters?: any): Promise<Receipt[]> {
@@ -119,7 +145,7 @@ class PaymentServiceImpl implements PaymentService {
   async updateReceipt(id: string, data: any): Promise<Receipt> {
     const index = mockReceipts.findIndex((r) => r.id === id);
     if (index === -1) {
-      throw new Error(`Receipt ${id} not found`);
+      throw new NotFoundError(`Receipt ${id} not found`);
     }
 
     const updated = {
@@ -135,7 +161,7 @@ class PaymentServiceImpl implements PaymentService {
   async deleteReceipt(id: string): Promise<void> {
     const index = mockReceipts.findIndex((r) => r.id === id);
     if (index === -1) {
-      throw new Error(`Receipt ${id} not found`);
+      throw new NotFoundError(`Receipt ${id} not found`);
     }
 
     mockReceipts.splice(index, 1);
