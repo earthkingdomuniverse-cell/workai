@@ -16,6 +16,7 @@ Track the root markdown cleanup and documentation organization work.
 - `docs/launch/` - go-live, launch scope, launch communications, experiments, and post-launch plans.
 - `docs/marketing/` - app-store and landing-page copy.
 - `docs/monetization/` - monetization philosophy, revenue streams, fees, pro plan, and enterprise monetization.
+- `docs/investor/` - investor summaries, fundraising narrative, pitch materials, and business-plan docs.
 - `docs/qa/` - QA inventory and final QA summary.
 - `docs/reports/` - build, project status, bug fix, and seed reports.
 
@@ -73,6 +74,10 @@ Track the root markdown cleanup and documentation organization work.
 - `APP_STORE_COPY.md` -> `docs/marketing/APP_STORE_COPY.md`
 - `LANDING_PAGE_COPY.md` -> `docs/marketing/LANDING_PAGE_COPY.md`
 
+### Investor
+
+- `INVESTOR_SUMMARY.md` -> `docs/investor/INVESTOR_SUMMARY.md`
+
 ## Files checked but not found at root
 
 - `WEEKLY_OPERATING_RHYTHM.md`
@@ -80,6 +85,9 @@ Track the root markdown cleanup and documentation organization work.
 - `FINAL_DELIVERY_SUMMARY.md`
 - `MOBILE_PACKAGE_FIX_REPORT.md`
 - `SERVER_START_REPORT.md`
+- `PITCH_DECK_COPY.md`
+- `INVESTOR_MEMO.md`
+- `BUSINESS_PLAN.md`
 
 ## Remaining recommended work
 
