@@ -12,9 +12,14 @@ import { typography, textStyles } from './typography';
 import { shadows } from './shadows';
 import { statusColors, getStatusColor } from './status';
 
+const semanticSpacing = {
+  ...spacing,
+  ...spacingPx,
+} as const;
+
 export const theme = {
   colors,
-  spacing,
+  spacing: semanticSpacing,
   spacingPx,
   radius,
   typography,
