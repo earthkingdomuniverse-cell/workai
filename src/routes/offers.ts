@@ -23,6 +23,14 @@ function serializeOffer(offer: any) {
   };
 }
 
+function serializeDeal(deal: any) {
+  return {
+    ...deal,
+    createdAt: deal.createdAt?.toISOString?.() ?? deal.createdAt,
+    updatedAt: deal.updatedAt?.toISOString?.() ?? deal.updatedAt,
+  };
+}
+
 const offers: FastifyPluginAsync = async (fastify) => {
   fastify.get('/offers', async (request, reply) => {
     const query = request.query as Record<string, string | undefined>;
@@ -76,6 +84,78 @@ const offers: FastifyPluginAsync = async (fastify) => {
     }
 
     return successResponse(reply, serializeOffer(offer));
+  });
+
+  fastify.post('/offers/:id/buy', async (request, reply) => {
+    const user = await authenticate(request, reply);
+    requireOfferUser(user);
+    const { id } = request.params as { id: string };
+    const body = request.body as Record<string, any>;
+
+    const offer = await prisma.offer.findUnique({ where: { id } });
+
+    if (!offer) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Offer not found' } });
+    }
+
+    if (offer.status !== 'active') {
+      throw new AppError('Offer is not available for purchase', {
+        code: 'BAD_REQUEST',
+        statusCode: 400,
+      });
+    }
+
+    if (offer.providerId === user.userId) {
+      throw new AppError('Provider cannot buy their own offer', {
+        code: 'BAD_REQUEST',
+        statusCode: 400,
+      });
+    }
+
+    const amount = body.amount ? Number(body.amount) : offer.price;
+
+    if (amount <= 0 || amount > offer.price) {
+      throw new AppError('Purchase amount is invalid', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
+    }
+
+    const deal = await prisma.deal.create({
+      data: {
+        offerId: offer.id,
+        providerId: offer.providerId,
+        clientId: user.userId,
+        status: 'created',
+        title: body.title ? String(body.title).trim() : offer.title,
+        description: body.description ? String(body.description).trim() : offer.description,
+        amount,
+        currency: offer.currency,
+        fundedAmount: 0,
+        releasedAmount: 0,
+        serviceFee: Math.round(amount * 0.05),
+      },
+      include: {
+        offer: true,
+        provider: true,
+        client: true,
+        transactions: true,
+      },
+    });
+
+    return createdResponse(reply, {
+      deal: serializeDeal(deal),
+      nextAction: {
+        type: 'payment_required',
+        amount,
+        currency: offer.currency,
+        dealId: deal.id,
+        paymentEndpoints: {
+          zalopay: '/payments/zalopay/create',
+          momo: '/payments/momo/create',
+        },
+      },
+    });
   });
 
   fastify.post('/offers', async (request, reply) => {
