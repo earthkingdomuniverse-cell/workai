@@ -4,6 +4,7 @@ import { authenticate } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { walletService } from '../services/walletService';
+import { notificationService } from '../services/notificationService';
 
 type DealStatus = 'created' | 'funded' | 'submitted' | 'released' | 'disputed';
 
@@ -14,6 +15,41 @@ type DealAuthUser = {
 
 function isOperatorUser(user: DealAuthUser) {
   return user.role === 'operator' || user.role === 'admin';
+}
+
+function notifyDealBestEffort(task: Promise<any>) {
+  task.catch((error) => {
+    console.warn('Deal notification hook failed:', error?.message || error);
+  });
+}
+
+function notifyDealParticipantsBestEffort(input: {
+  deal: any;
+  actorUserId: string;
+  title: string;
+  messageForClient: string;
+  messageForProvider: string;
+  priority?: 'low' | 'medium' | 'high';
+}) {
+  if (input.deal.clientId && input.deal.clientId !== input.actorUserId) {
+    notifyDealBestEffort(notificationService.notifyDealUpdate({
+      userId: input.deal.clientId,
+      dealId: input.deal.id,
+      title: input.title,
+      message: input.messageForClient,
+      priority: input.priority || 'medium',
+    }));
+  }
+
+  if (input.deal.providerId && input.deal.providerId !== input.actorUserId) {
+    notifyDealBestEffort(notificationService.notifyDealUpdate({
+      userId: input.deal.providerId,
+      dealId: input.deal.id,
+      title: input.title,
+      message: input.messageForProvider,
+      priority: input.priority || 'medium',
+    }));
+  }
 }
 
 async function requireDealUser(request: any, reply: any): Promise<DealAuthUser> {
@@ -171,6 +207,15 @@ const deals: FastifyPluginAsync = async (fastify) => {
       include: includeDealRelations,
     });
 
+    notifyDealParticipantsBestEffort({
+      deal,
+      actorUserId: user.userId,
+      title: 'New deal created',
+      messageForClient: `A deal was created: ${deal.title}`,
+      messageForProvider: `A deal was created: ${deal.title}`,
+      priority: 'medium',
+    });
+
     return createdResponse(reply, serializeDeal(deal));
   });
 
@@ -230,6 +275,15 @@ const deals: FastifyPluginAsync = async (fastify) => {
       });
     });
 
+    notifyDealParticipantsBestEffort({
+      deal,
+      actorUserId: user.userId,
+      title: 'Deal funded',
+      messageForClient: `You funded the deal: ${deal.title}`,
+      messageForProvider: `The client funded the deal: ${deal.title}`,
+      priority: 'high',
+    });
+
     return successResponse(reply, serializeDeal(deal));
   });
 
@@ -259,6 +313,15 @@ const deals: FastifyPluginAsync = async (fastify) => {
         data: { status: 'submitted' },
         include: includeDealRelations,
       });
+    });
+
+    notifyDealParticipantsBestEffort({
+      deal,
+      actorUserId: user.userId,
+      title: 'Work submitted',
+      messageForClient: `The provider submitted work for: ${deal.title}`,
+      messageForProvider: `You submitted work for: ${deal.title}`,
+      priority: 'high',
     });
 
     return successResponse(reply, serializeDeal(deal));
@@ -318,6 +381,22 @@ const deals: FastifyPluginAsync = async (fastify) => {
       include: includeDealRelations,
     });
 
+    notifyDealParticipantsBestEffort({
+      deal,
+      actorUserId: user.userId,
+      title: 'Funds released',
+      messageForClient: `You released funds for: ${deal.title}`,
+      messageForProvider: `Funds were released for: ${deal.title}`,
+      priority: 'high',
+    });
+
+    notifyDealBestEffort(notificationService.notifyPaymentReceived({
+      userId: deal.providerId,
+      dealId: deal.id,
+      amount,
+      currency: deal.currency,
+    }));
+
     return successResponse(reply, serializeDeal(deal));
   });
 
@@ -356,6 +435,15 @@ const deals: FastifyPluginAsync = async (fastify) => {
         data: { status: 'disputed' },
         include: includeDealRelations,
       });
+    });
+
+    notifyDealParticipantsBestEffort({
+      deal,
+      actorUserId: user.userId,
+      title: 'Deal disputed',
+      messageForClient: `A dispute was opened for: ${deal.title}`,
+      messageForProvider: `A dispute was opened for: ${deal.title}`,
+      priority: 'high',
     });
 
     return successResponse(reply, serializeDeal(deal));
