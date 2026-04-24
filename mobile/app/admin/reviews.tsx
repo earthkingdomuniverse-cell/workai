@@ -1,27 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { theme } from '../../theme';
 import { useAuth } from '../../src/hooks/useAuth';
 import AccessDeniedState from '../../src/components/AccessDeniedState';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
-import { reviewService, Review } from '../../src/services/reviewService';
+import { adminService } from '../../src/services/adminService';
 
 export default function AdminReviewsScreen() {
   const { isOperator } = useAuth();
-  const [items, setItems] = useState<Review[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const loadReviews = async () => {
     try {
       setError(null);
-      const data = await reviewService.getReviews({});
-      // For admin, show reviews that might need moderation (e.g., pending status or reported)
-      const pendingReviews = data.filter((r) => r.status === 'pending' || r.reported === true);
-      setItems(pendingReviews);
+      const response = await adminService.getPendingReviews();
+      setItems(response.items || []);
     } catch (_error) {
       setError('Failed to load review moderation queue');
     } finally {
@@ -34,20 +33,35 @@ export default function AdminReviewsScreen() {
     loadReviews();
   }, []);
 
-  if (!isOperator)
-    return (
-      <AccessDeniedState message="Only operator and admin roles can access review moderation." />
-    );
+  const processReview = async (reviewId: string, action: 'approve' | 'reject') => {
+    try {
+      setProcessingId(reviewId);
+      await adminService.processReviewAction(reviewId, action, `Operator ${action} action from mobile admin.`);
+      await loadReviews();
+    } catch (_error) {
+      Alert.alert('Action failed', `Could not ${action} this review.`);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const flagReview = async (reviewId: string) => {
+    try {
+      setProcessingId(reviewId);
+      await adminService.flagReview(reviewId, ['operator_flagged']);
+      await loadReviews();
+    } catch (_error) {
+      Alert.alert('Flag failed', 'Could not flag this review.');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  if (!isOperator) {
+    return <AccessDeniedState message="Only operator and admin roles can access review moderation." />;
+  }
   if (loading) return <LoadingState fullScreen message="Loading reviews..." />;
   if (error && items.length === 0) return <ErrorState message={error} onRetry={loadReviews} />;
-  if (items.length === 0)
-    return (
-      <EmptyState
-        title="No pending reviews"
-        description="Operator review queue is currently empty."
-        icon="⭐"
-      />
-    );
 
   return (
     <ScrollView
@@ -64,16 +78,47 @@ export default function AdminReviewsScreen() {
       }
     >
       <Text style={styles.title}>Reviews Management</Text>
-      {items.map((item) => (
-        <View key={item.id} style={styles.card}>
-          <Text style={styles.cardTitle}>Review {item.id}</Text>
-          <Text style={styles.cardText}>Deal: {item.dealId}</Text>
-          <Text style={styles.cardText}>Rating: {item.rating}/5</Text>
-          <Text style={styles.cardText}>Status: {item.status || 'pending'}</Text>
-          <Text style={styles.cardText}>{item.comment}</Text>
-          {item.reviewer && <Text style={styles.cardText}>By: {item.reviewer.displayName}</Text>}
-        </View>
-      ))}
+      <Text style={styles.subtitle}>Moderate pending or flagged reviews from backend admin API.</Text>
+
+      {items.length === 0 ? (
+        <EmptyState title="No pending reviews" description="Operator review queue is currently empty." icon="⭐" />
+      ) : (
+        items.map((item) => (
+          <View key={item.id} style={styles.card}>
+            <Text style={styles.cardTitle}>Review {item.id}</Text>
+            <Text style={styles.cardText}>Deal: {item.dealId || 'unknown'}</Text>
+            <Text style={styles.cardText}>Reviewer: {item.reviewerId || item.reviewer?.id || 'unknown'}</Text>
+            <Text style={styles.cardText}>Subject: {item.subjectId || item.subject?.id || 'unknown'}</Text>
+            <Text style={styles.cardText}>Rating: {item.rating}/5</Text>
+            <Text style={styles.cardText}>Status: {item.status || 'pending'}</Text>
+            <Text style={styles.comment}>{item.comment || 'No comment provided.'}</Text>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.button, styles.approveButton]}
+                disabled={processingId === item.id}
+                onPress={() => processReview(item.id, 'approve')}
+              >
+                <Text style={styles.buttonText}>Approve</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.rejectButton]}
+                disabled={processingId === item.id}
+                onPress={() => processReview(item.id, 'reject')}
+              >
+                <Text style={styles.buttonText}>Reject</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.flagButton]}
+                disabled={processingId === item.id}
+                onPress={() => flagReview(item.id)}
+              >
+                <Text style={styles.buttonText}>Flag</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))
+      )}
     </ScrollView>
   );
 }
@@ -85,6 +130,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize['3xl'],
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  subtitle: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.tertiary,
     marginBottom: theme.spacing.lg,
   },
   card: {
@@ -103,5 +153,28 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.tertiary,
     marginTop: theme.spacing.xs,
+  },
+  comment: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.md,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+  },
+  button: {
+    flex: 1,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  approveButton: { backgroundColor: theme.colors.success[500] },
+  rejectButton: { backgroundColor: theme.colors.error[500] },
+  flagButton: { backgroundColor: theme.colors.warning[500] },
+  buttonText: {
+    color: theme.colors.text.inverse,
+    fontWeight: theme.typography.fontWeight.bold,
   },
 });
