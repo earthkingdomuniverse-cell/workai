@@ -188,6 +188,28 @@ model Transaction {
   @@index([type])
   @@index([status])
   @@index([createdAt])
+  @@unique([provider, providerRef])
+}
+
+model PaymentAuditLog {
+  id          String   @id @default(uuid())
+  provider    String
+  providerRef String?
+  eventType   String
+  status      String
+  dealId      String?
+  amount      Float?
+  currency    String?
+  message     String?
+  raw         Json?
+  createdAt   DateTime @default(now())
+
+  @@index([provider])
+  @@index([providerRef])
+  @@index([eventType])
+  @@index([status])
+  @@index([dealId])
+  @@index([createdAt])
 }
 
 model Dispute {
