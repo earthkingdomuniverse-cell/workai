@@ -7,7 +7,16 @@ import { walletService } from '../services/walletService';
 
 type DealStatus = 'created' | 'funded' | 'submitted' | 'released' | 'disputed';
 
-async function requireDealUser(request: any, reply: any) {
+type DealAuthUser = {
+  userId: string;
+  role?: string;
+};
+
+function isOperatorUser(user: DealAuthUser) {
+  return user.role === 'operator' || user.role === 'admin';
+}
+
+async function requireDealUser(request: any, reply: any): Promise<DealAuthUser> {
   const user = await authenticate(request, reply);
   if (!user || user.userId === 'guest_user') {
     throw new AppError('Authentication required', { code: 'AUTHENTICATION_ERROR', statusCode: 401 });
@@ -16,13 +25,46 @@ async function requireDealUser(request: any, reply: any) {
 }
 
 async function resolveUserScopedDealFilters(request: any, reply: any, query: Record<string, string | undefined>) {
-  const usesMeFilter = query.providerId === 'me' || query.clientId === 'me';
-  const user = usesMeFilter ? await requireDealUser(request, reply) : null;
+  const user = await requireDealUser(request, reply);
+  const where: any = {};
 
-  return {
-    providerId: query.providerId === 'me' ? user?.userId : query.providerId,
-    clientId: query.clientId === 'me' ? user?.userId : query.clientId,
-  };
+  if (query.status) where.status = query.status;
+
+  if (isOperatorUser(user)) {
+    if (query.providerId) where.providerId = query.providerId === 'me' ? user.userId : query.providerId;
+    if (query.clientId) where.clientId = query.clientId === 'me' ? user.userId : query.clientId;
+    return where;
+  }
+
+  const requestedProviderId = query.providerId === 'me' ? user.userId : query.providerId;
+  const requestedClientId = query.clientId === 'me' ? user.userId : query.clientId;
+
+  if (requestedProviderId && requestedProviderId !== user.userId) {
+    throw new AppError('Cannot view another provider\'s deals', {
+      code: 'FORBIDDEN',
+      statusCode: 403,
+    });
+  }
+
+  if (requestedClientId && requestedClientId !== user.userId) {
+    throw new AppError('Cannot view another client\'s deals', {
+      code: 'FORBIDDEN',
+      statusCode: 403,
+    });
+  }
+
+  if (requestedProviderId) {
+    where.providerId = user.userId;
+    return where;
+  }
+
+  if (requestedClientId) {
+    where.clientId = user.userId;
+    return where;
+  }
+
+  where.OR = [{ providerId: user.userId }, { clientId: user.userId }];
+  return where;
 }
 
 function ensureTransition(current: string, next: DealStatus, allowed: DealStatus[]) {
@@ -64,12 +106,7 @@ const includeDealRelations = {
 const deals: FastifyPluginAsync = async (fastify) => {
   fastify.get('/deals', async (request, reply) => {
     const query = request.query as Record<string, string | undefined>;
-    const scopedFilters = await resolveUserScopedDealFilters(request, reply, query);
-    const where: any = {};
-
-    if (query.status) where.status = query.status;
-    if (scopedFilters.providerId) where.providerId = scopedFilters.providerId;
-    if (scopedFilters.clientId) where.clientId = scopedFilters.clientId;
+    const where = await resolveUserScopedDealFilters(request, reply, query);
 
     const items = await prisma.deal.findMany({
       where,
@@ -138,11 +175,16 @@ const deals: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/deals/:id', async (request, reply) => {
+    const user = await requireDealUser(request, reply);
     const { id } = request.params as { id: string };
     const deal = await prisma.deal.findUnique({ where: { id }, include: includeDealRelations });
 
     if (!deal) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
+    }
+
+    if (!isOperatorUser(user) && ![deal.providerId, deal.clientId].includes(user.userId)) {
+      return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only deal participants can view this deal' } });
     }
 
     return successResponse(reply, serializeDeal(deal));
