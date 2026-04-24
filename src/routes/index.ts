@@ -16,6 +16,7 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   const admin = (await import('./admin')).default;
   const payments = (await import('./payments')).default;
   const wallet = (await import('./wallet')).default;
+  const withdraw = (await import('./withdraw')).default;
 
   await fastify.register(health);
   await fastify.register(auth);
@@ -31,6 +32,7 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(admin);
   await fastify.register(payments);
   await fastify.register(wallet);
+  await fastify.register(withdraw);
 
   logger.info(`✅ Routes registered`);
 };
