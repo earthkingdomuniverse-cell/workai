@@ -21,14 +21,7 @@ async function getOrCreateWallet(tx: any, userId: string, currency = 'VND') {
   });
 
   return tx.wallet.create({
-    data: {
-      userId,
-      currency,
-      available: 0,
-      held: 0,
-      lifetimeIn: 0,
-      lifetimeOut: 0,
-    },
+    data: { userId, currency, available: 0, held: 0, lifetimeIn: 0, lifetimeOut: 0 },
   });
 }
 
@@ -59,11 +52,9 @@ export const walletService = {
 
       const wallet = await getOrCreateWallet(tx, input.userId, input.currency || 'VND');
       const balanceBefore = wallet.available;
-      const balanceAfter = balanceBefore + input.amount;
-
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
-        data: { available: balanceAfter, lifetimeIn: wallet.lifetimeIn + input.amount },
+        data: { available: wallet.available + input.amount, lifetimeIn: wallet.lifetimeIn + input.amount },
       });
 
       return tx.walletLedgerEntry.create({
@@ -104,8 +95,6 @@ export const walletService = {
       const wallet = await getOrCreateWallet(tx, input.userId, input.currency || 'VND');
       if (wallet.available < input.amount) throw new Error('INSUFFICIENT_FUNDS');
 
-      const balanceBefore = wallet.available;
-      const heldBefore = wallet.held;
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
         data: { available: wallet.available - input.amount, held: wallet.held + input.amount },
@@ -119,13 +108,56 @@ export const walletService = {
           direction: 'debit',
           amount: input.amount,
           currency: input.currency || wallet.currency,
-          balanceBefore,
+          balanceBefore: wallet.available,
           balanceAfter: updated.available,
-          heldBefore,
+          heldBefore: wallet.held,
           heldAfter: updated.held,
           dealId: input.dealId,
           idempotencyKey: input.idempotencyKey,
           description: input.description || `Hold funds for deal ${input.dealId}`,
+        },
+      });
+    });
+  },
+
+  async reverseWithdrawal(input: {
+    userId: string;
+    amount: number;
+    currency?: string;
+    transactionId?: string;
+    idempotencyKey: string;
+    description?: string;
+    metadata?: any;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.walletLedgerEntry.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+      if (existing) return existing;
+
+      const wallet = await getOrCreateWallet(tx, input.userId, input.currency || 'VND');
+      const updated = await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          available: wallet.available + input.amount,
+          lifetimeOut: Math.max(0, wallet.lifetimeOut - input.amount),
+        },
+      });
+
+      return tx.walletLedgerEntry.create({
+        data: {
+          walletId: wallet.id,
+          userId: input.userId,
+          type: 'refund',
+          direction: 'credit',
+          amount: input.amount,
+          currency: input.currency || wallet.currency,
+          balanceBefore: wallet.available,
+          balanceAfter: updated.available,
+          heldBefore: wallet.held,
+          heldAfter: updated.held,
+          transactionId: input.transactionId,
+          idempotencyKey: input.idempotencyKey,
+          description: input.description || 'Withdrawal reversed',
+          metadata: input.metadata,
         },
       });
     });
