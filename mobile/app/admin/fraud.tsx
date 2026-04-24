@@ -7,7 +7,7 @@ import FraudSignalCard from '../../src/components/FraudSignalCard';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
-import { dealService } from '../../src/services/dealService';
+import { adminService } from '../../src/services/adminService';
 
 export default function AdminFraudScreen() {
   const { isOperator } = useAuth();
@@ -19,36 +19,8 @@ export default function AdminFraudScreen() {
   const loadFraud = async () => {
     try {
       setError(null);
-
-      // Analyze deals for potential fraud patterns
-      const deals = await dealService.getDeals();
-
-      // Mock fraud detection scenarios
-      // In production, this would use ML/AI to detect patterns
-      const fraudScenarios = [
-        {
-          id: 'fraud_1',
-          userId: 'user_xxx',
-          type: 'unusual_activity',
-          description: 'Rapid account creation from new device',
-          confidence: 75,
-          evidence: ['Multiple signups', 'Same IP range'],
-          status: 'monitoring',
-          createdAt: '2026-04-21T10:00:00Z',
-        },
-        {
-          id: 'fraud_2',
-          userId: 'user_yyy',
-          type: 'payment_anomaly',
-          description: 'Unusual payment pattern detected',
-          confidence: 88,
-          evidence: ['High frequency', 'Multiple cards'],
-          status: 'under_review',
-          createdAt: '2026-04-20T10:00:00Z',
-        },
-      ];
-
-      setItems(fraudScenarios);
+      const response = await adminService.getFraudSignals();
+      setItems(response.items || []);
     } catch (_error) {
       setError('Failed to load fraud signals');
     } finally {
@@ -61,18 +33,11 @@ export default function AdminFraudScreen() {
     loadFraud();
   }, []);
 
-  if (!isOperator)
+  if (!isOperator) {
     return <AccessDeniedState message="Only operator and admin roles can access fraud." />;
+  }
   if (loading) return <LoadingState fullScreen message="Loading fraud signals..." />;
   if (error && items.length === 0) return <ErrorState message={error} onRetry={loadFraud} />;
-  if (items.length === 0)
-    return (
-      <EmptyState
-        title="No fraud signals"
-        description="No suspicious activity is active right now."
-        icon="🧪"
-      />
-    );
 
   return (
     <ScrollView
@@ -89,9 +54,12 @@ export default function AdminFraudScreen() {
       }
     >
       <Text style={styles.title}>Fraud Detection</Text>
-      {items.map((item) => (
-        <FraudSignalCard key={item.id} signal={item} />
-      ))}
+      <Text style={styles.subtitle}>Fraud signals from backend admin API.</Text>
+      {items.length === 0 ? (
+        <EmptyState title="No fraud signals" description="No suspicious activity is active right now." icon="🧪" />
+      ) : (
+        items.map((item) => <FraudSignalCard key={item.id || `${item.userId}-${item.type}`} signal={item} />)
+      )}
     </ScrollView>
   );
 }
@@ -103,6 +71,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize['3xl'],
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  subtitle: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.tertiary,
     marginBottom: theme.spacing.lg,
   },
 });
