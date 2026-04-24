@@ -1,6 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { authenticate } from '../lib/auth';
-import { AppError } from '../lib/errors';
+import { requireAuthenticated } from '../lib/auth';
 import { successResponse } from '../lib/response';
 import { prisma } from '../lib/prisma';
 
@@ -34,17 +33,6 @@ function defaultPreferences(): NotificationPreferences {
       system: true,
     },
   };
-}
-
-async function requireNotificationUser(request: any, reply: any) {
-  const user = await authenticate(request, reply);
-  if (!user || user.userId === 'guest_user') {
-    throw new AppError('Authentication required', {
-      code: 'AUTHENTICATION_ERROR',
-      statusCode: 401,
-    });
-  }
-  return user;
 }
 
 function serializeNotification(notification: any) {
@@ -109,7 +97,7 @@ async function getOrCreatePreferences(userId: string): Promise<NotificationPrefe
 
 const notifications: FastifyPluginAsync = async (fastify) => {
   fastify.get('/notifications', async (request, reply) => {
-    const user = await requireNotificationUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const query = request.query as Record<string, string | undefined>;
     const limit = Math.min(Number(query.limit || 20), 100);
     const offset = Math.max(Number(query.offset || 0), 0);
@@ -139,7 +127,7 @@ const notifications: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/notifications/:id/read', async (request, reply) => {
-    const user = await requireNotificationUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const { id } = request.params as { id: string };
 
     const existing = await prisma.notification.findFirst({ where: { id, userId: user.userId } });
@@ -156,7 +144,7 @@ const notifications: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/notifications/read-all', async (request, reply) => {
-    const user = await requireNotificationUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const result = await prisma.notification.updateMany({
       where: { userId: user.userId, read: false },
       data: { read: true, readAt: new Date() },
@@ -166,7 +154,7 @@ const notifications: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.delete('/notifications/:id', async (request, reply) => {
-    const user = await requireNotificationUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const { id } = request.params as { id: string };
 
     const existing = await prisma.notification.findFirst({ where: { id, userId: user.userId } });
@@ -179,20 +167,20 @@ const notifications: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/notifications/unread-count', async (request, reply) => {
-    const user = await requireNotificationUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     await ensureSeedNotifications(user.userId);
     const count = await prisma.notification.count({ where: { userId: user.userId, read: false } });
     return successResponse(reply, { count });
   });
 
   fastify.get('/notifications/preferences', async (request, reply) => {
-    const user = await requireNotificationUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const preferences = await getOrCreatePreferences(user.userId);
     return successResponse(reply, preferences);
   });
 
   fastify.patch('/notifications/preferences', async (request, reply) => {
-    const user = await requireNotificationUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const body = request.body as Partial<NotificationPreferences>;
     const current = await getOrCreatePreferences(user.userId);
     const next: NotificationPreferences = {
