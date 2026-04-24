@@ -12,11 +12,12 @@ Track the root markdown cleanup and documentation organization work.
 ## Documentation folders
 
 - `docs/architecture/` - architecture and technical structure.
-- `docs/product/` - activation, journeys, growth, retention, liquidity, and first-user plans.
-- `docs/launch/` - go-live, launch scope, launch communications, experiments, and post-launch plans.
+- `docs/product/` - activation, journeys, growth, retention, liquidity, notifications, referrals, and first-user plans.
+- `docs/launch/` - go-live, launch scope, launch communications, staging, support/incident ops, experiments, and post-launch plans.
 - `docs/marketing/` - app-store and landing-page copy.
 - `docs/monetization/` - monetization philosophy, revenue streams, fees, pro plan, and enterprise monetization.
 - `docs/investor/` - investor summaries, fundraising narrative, pitch materials, and business-plan docs.
+- `docs/analytics/` - event tracking and analytics dashboard specifications.
 - `docs/qa/` - QA inventory and final QA summary.
 - `docs/reports/` - build, project status, bug fix, and seed reports.
 
@@ -48,6 +49,8 @@ Track the root markdown cleanup and documentation organization work.
 - `POST_LAUNCH_30_DAY_PLAN.md` -> `docs/launch/POST_LAUNCH_30_DAY_PLAN.md`
 - `LAUNCH_COMMUNICATION_PLAN.md` -> `docs/launch/LAUNCH_COMMUNICATION_PLAN.md`
 - `LAUNCH_EXPERIMENTS_PLAN.md` -> `docs/launch/LAUNCH_EXPERIMENTS_PLAN.md`
+- `STAGING.md` -> `docs/launch/STAGING.md`
+- `SUPPORT_AND_INCIDENT_OPS.md` -> `docs/launch/SUPPORT_AND_INCIDENT_OPS.md`
 
 ### Product
 
@@ -59,6 +62,9 @@ Track the root markdown cleanup and documentation organization work.
 - `FIRST_100_USERS_PLAN.md` -> `docs/product/FIRST_100_USERS_PLAN.md`
 - `FIRST_100_SUCCESSFUL_EXCHANGES.md` -> `docs/product/FIRST_100_SUCCESSFUL_EXCHANGES.md`
 - `ONBOARDING_ACTIVATION_UPGRADE.md` -> `docs/product/ONBOARDING_ACTIVATION_UPGRADE.md`
+- `LAUNCH_PERSONAS_AND_WEDGE.md` -> `docs/product/LAUNCH_PERSONAS_AND_WEDGE.md`
+- `REFERRAL_AND_INVITE_SPEC.md` -> `docs/product/REFERRAL_AND_INVITE_SPEC.md`
+- `NOTIFICATION_STRATEGY.md` -> `docs/product/NOTIFICATION_STRATEGY.md`
 
 ### Monetization
 
@@ -77,6 +83,13 @@ Track the root markdown cleanup and documentation organization work.
 ### Investor
 
 - `INVESTOR_SUMMARY.md` -> `docs/investor/INVESTOR_SUMMARY.md`
+- `WHY_NOW.md` -> `docs/investor/WHY_NOW.md`
+- `FOUNDER_NARRATIVE_AND_COMPANY_THESIS.md` -> `docs/investor/FOUNDER_NARRATIVE_AND_COMPANY_THESIS.md`
+
+### Analytics
+
+- `EVENT_TRACKING_PLAN.md` -> `docs/analytics/EVENT_TRACKING_PLAN.md`
+- `ANALYTICS_DASHBOARD_SPEC.md` -> `docs/analytics/ANALYTICS_DASHBOARD_SPEC.md`
 
 ## Files checked but not found at root
 
@@ -92,10 +105,9 @@ Track the root markdown cleanup and documentation organization work.
 ## Remaining recommended work
 
 1. Audit root for any remaining `.md` files beyond `README.md` and `WORKAI_REBRAND_REPORT.md`.
-2. Finish WorkAI rebrand cleanup for moved docs that still contain historical SkillValue AI references.
-3. Add or update links in root `README.md` if new docs are added.
-4. Consider adding a docs lint/check script later.
+2. Finish WorkAI rebrand cleanup for source/code strings that still contain historical SkillValue AI references.
+3. Add docs lint/check script later.
 
 ## Current status
 
-Documentation has been substantially organized into `docs/`. Root is much cleaner, but historical wording cleanup is still ongoing.
+Documentation has been substantially organized into `docs/`. Root is much cleaner, but source-code and script string cleanup may still be needed.
