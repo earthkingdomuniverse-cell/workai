@@ -1,7 +1,16 @@
+import { ENABLE_MOCK_MODE } from '../constants/config';
 import apiClient from './apiClient';
 import { generateMockProposals, generateMockProposal } from './mockData';
 
-const USE_MOCK_FALLBACK = true;
+interface ApiResponse<T> {
+  data: T;
+  meta?: Record<string, any>;
+}
+
+interface ListResponse<T> {
+  items: T[];
+  total?: number;
+}
 
 export interface Proposal {
   id: string;
@@ -50,6 +59,10 @@ export interface CreateProposalInput {
   attachments?: string[];
 }
 
+function shouldUseMockFallback(): boolean {
+  return ENABLE_MOCK_MODE;
+}
+
 export const proposalService = {
   async getProposals(filters?: {
     requestId?: string;
@@ -75,10 +88,12 @@ export const proposalService = {
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
       const query = params.toString();
-      const response = await apiClient.get(query ? `/proposals?${query}` : '/proposals');
-      return response.data?.data?.items || [];
+      const response = await apiClient.get<ApiResponse<ListResponse<Proposal>>>(
+        query ? `/proposals?${query}` : '/proposals',
+      );
+      return response.data.items || [];
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('proposalService.getProposals failed, using mock fallback');
         return generateMockProposals(filters?.limit || 5);
       }
@@ -88,10 +103,10 @@ export const proposalService = {
 
   async getProposal(id: string): Promise<Proposal> {
     try {
-      const response = await apiClient.get(`/proposals/${id}`);
-      return response.data?.data;
+      const response = await apiClient.get<ApiResponse<Proposal>>(`/proposals/${id}`);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`proposalService.getProposal(${id}) failed, using mock fallback`);
         return generateMockProposal(id);
       }
@@ -101,10 +116,10 @@ export const proposalService = {
 
   async getMyProposals(): Promise<Proposal[]> {
     try {
-      const response = await apiClient.get('/proposals/mine');
-      return response.data?.data?.items || [];
+      const response = await apiClient.get<ApiResponse<ListResponse<Proposal>>>('/proposals/mine');
+      return response.data.items || [];
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('proposalService.getMyProposals failed, using mock fallback');
         return generateMockProposals(5);
       }
@@ -114,10 +129,10 @@ export const proposalService = {
 
   async createProposal(data: CreateProposalInput): Promise<Proposal> {
     try {
-      const response = await apiClient.post('/proposals', data);
-      return response.data?.data;
+      const response = await apiClient.post<ApiResponse<Proposal>>('/proposals', data);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('proposalService.createProposal failed, using mock fallback');
         return generateMockProposal('new-proposal');
       }
@@ -127,13 +142,12 @@ export const proposalService = {
 
   async acceptProposal(id: string): Promise<Proposal> {
     try {
-      const response = await apiClient.post(`/proposals/${id}/accept`);
-      return response.data?.data;
+      const response = await apiClient.post<ApiResponse<Proposal>>(`/proposals/${id}/accept`);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`proposalService.acceptProposal(${id}) failed, using mock fallback`);
-        const proposal = generateMockProposal(id, 'accepted');
-        return proposal;
+        return generateMockProposal(id, 'accepted');
       }
       throw error;
     }
@@ -141,13 +155,12 @@ export const proposalService = {
 
   async rejectProposal(id: string): Promise<Proposal> {
     try {
-      const response = await apiClient.post(`/proposals/${id}/reject`);
-      return response.data?.data;
+      const response = await apiClient.post<ApiResponse<Proposal>>(`/proposals/${id}/reject`);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`proposalService.rejectProposal(${id}) failed, using mock fallback`);
-        const proposal = generateMockProposal(id, 'rejected');
-        return proposal;
+        return generateMockProposal(id, 'rejected');
       }
       throw error;
     }
@@ -155,13 +168,12 @@ export const proposalService = {
 
   async withdrawProposal(id: string): Promise<Proposal> {
     try {
-      const response = await apiClient.post(`/proposals/${id}/withdraw`);
-      return response.data?.data;
+      const response = await apiClient.post<ApiResponse<Proposal>>(`/proposals/${id}/withdraw`);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`proposalService.withdrawProposal(${id}) failed, using mock fallback`);
-        const proposal = generateMockProposal(id, 'withdrawn');
-        return proposal;
+        return generateMockProposal(id, 'withdrawn');
       }
       throw error;
     }
@@ -169,10 +181,10 @@ export const proposalService = {
 
   async updateProposal(id: string, data: Partial<CreateProposalInput>): Promise<Proposal> {
     try {
-      const response = await apiClient.patch(`/proposals/${id}`, data);
-      return response.data?.data;
+      const response = await apiClient.patch<ApiResponse<Proposal>>(`/proposals/${id}`, data);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`proposalService.updateProposal(${id}) failed, using mock fallback`);
         const proposal = generateMockProposal(id);
         return { ...proposal, ...data };
@@ -185,7 +197,7 @@ export const proposalService = {
     try {
       await apiClient.delete(`/proposals/${id}`);
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`proposalService.deleteProposal(${id}) failed, using mock fallback`);
         return;
       }
