@@ -19,6 +19,8 @@ import { colors, spacing, typography } from '../../theme';
 import messageService, { type Message, type Conversation } from '../../src/services/messageService';
 import LoadingState from '../../components/LoadingState';
 
+const Icon = Ionicons as unknown as React.ComponentType<any>;
+
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -128,7 +130,7 @@ export default function ConversationScreen() {
             <Text style={styles.timeText}>{formatTime(item.createdAt)}</Text>
           </View>
           {isMe && item.readAt && (
-            <Ionicons
+            <Icon
               name="checkmark-done"
               size={16}
               color={colors.success}
@@ -147,7 +149,7 @@ export default function ConversationScreen() {
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="chatbubbles-outline" size={48} color={colors.textSecondary} />
+        <Icon name="chatbubbles-outline" size={48} color={colors.textSecondary} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadConversation}>
           <Text style={styles.retryButtonText}>Retry</Text>
@@ -166,7 +168,7 @@ export default function ConversationScreen() {
               onPress={() => router.push(`/messages/${id}`)}
               style={styles.headerButton}
             >
-              <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
+              <Icon name="information-circle-outline" size={24} color={colors.primary} />
             </TouchableOpacity>
           ),
         }}
@@ -208,7 +210,7 @@ export default function ConversationScreen() {
             {isSending ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Ionicons name="send" size={20} color={colors.white} />
+              <Icon name="send" size={20} color={colors.white} />
             )}
           </TouchableOpacity>
         </View>

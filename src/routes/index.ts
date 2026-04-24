@@ -14,6 +14,11 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   const ai = (await import('./ai')).default;
   const recommendations = (await import('./recommendations')).default;
   const admin = (await import('./admin')).default;
+  const billing = (await import('./billing')).default;
+  const packaging = (await import('./packaging')).default;
+  const lead = (await import('./lead')).default;
+  const oss = (await import('./oss')).default;
+  const skillExchange = (await import('./skill-exchange')).default;
   const zalo = (await import('./zalo')).default;
 
   await fastify.register(health);
@@ -28,6 +33,11 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(ai);
   await fastify.register(recommendations);
   await fastify.register(zalo);
+  await fastify.register(billing);
+  await fastify.register(packaging);
+  await fastify.register(lead);
+  await fastify.register(oss);
+  await fastify.register(skillExchange);
   await fastify.register(admin);
 
   logger.info(`✅ Routes registered`);

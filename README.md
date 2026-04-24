@@ -105,6 +105,12 @@ WorkAI supports GitHub Codespaces. A dev container is defined under `.devcontain
   - `cd mobile && npm ci && npx expo start --tunnel`
 - You can connect from a physical device using Expo's QR code with tunnel connectivity.
 
+## Open Source & Community
+
+- WorkAI embraces open-source principles. The core platform is available under an open license (MIT) and a plugin ecosystem allows community contributions.
+- See LICENSE for licensing and docs/open-source.md for governance, contribution guidelines, and OSS roadmap.
+- See CONTRIBUTING.md for how to contribute and PR guidelines.
+
 Notes:
 
 - In codespaces, the backend is available at the codespace-assigned URL with port 3000 (e.g., http://<codespace-id>:3000).

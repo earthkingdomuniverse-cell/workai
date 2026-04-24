@@ -71,6 +71,27 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="billing"
+        options={{
+          title: 'Billing',
+          tabBarLabel: 'Billing',
+        }}
+      />
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          title: 'Wallet',
+          tabBarLabel: 'Wallet',
+        }}
+      />
+      <Tabs.Screen
+        name="skill-exchange"
+        options={{
+          title: 'Skill Exchange',
+          tabBarLabel: 'Skill Exchange',
+        }}
+      />
+      <Tabs.Screen
         name="inbox"
         options={{
           title: 'Inbox',

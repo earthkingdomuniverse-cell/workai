@@ -19,6 +19,8 @@ import notificationService, {
 } from '../../src/services/notificationService';
 import LoadingState from '../../components/LoadingState';
 
+const Icon = Ionicons as unknown as React.ComponentType<any>;
+
 const notificationIcons: Record<NotificationType, string> = {
   message: 'chatbubble',
   deal_update: 'briefcase',
@@ -170,7 +172,7 @@ export default function NotificationsScreen() {
         <View
           style={[styles.iconContainer, { backgroundColor: notificationColors[item.type] + '20' }]}
         >
-          <Ionicons
+          <Icon
             name={notificationIcons[item.type] as any}
             size={24}
             color={notificationColors[item.type]}
@@ -196,7 +198,7 @@ export default function NotificationsScreen() {
         onPress={() => handleDeleteNotification(item.id)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="close" size={20} color={colors.textSecondary} />
+        <Icon name="close" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -229,7 +231,7 @@ export default function NotificationsScreen() {
 
       {notifications.length === 0 && !error ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="notifications-off-outline" size={64} color={colors.textSecondary} />
+          <Icon name="notifications-off-outline" size={64} color={colors.textSecondary} />
           <Text style={styles.emptyTitle}>No notifications yet</Text>
           <Text style={styles.emptyText}>We'll notify you when something important happens</Text>
         </View>
@@ -249,7 +251,7 @@ export default function NotificationsScreen() {
           ListEmptyComponent={
             error ? (
               <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
+                <Icon name="alert-circle-outline" size={48} color={colors.error} />
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
                   <Text style={styles.retryButtonText}>Retry</Text>

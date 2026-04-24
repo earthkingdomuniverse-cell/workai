@@ -317,6 +317,17 @@ h1, h2, h3, .logo {
     gap: 2rem;
 }
 
+/* Packaging section styling (Aesthetic parity with features) */
+.packaging {
+    padding: 4rem 2rem;
+}
+.packaging-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.75rem;
+    margin-top: 1rem;
+}
+
 .feature-card {
     padding: 2.5rem;
     border-radius: 20px;

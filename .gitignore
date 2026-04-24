@@ -23,6 +23,4 @@ coverage/
 # OS
 .DS_Store
 
-"""End of gitignore"""
-
 /src/generated/prisma

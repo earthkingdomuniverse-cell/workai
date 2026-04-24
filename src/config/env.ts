@@ -36,6 +36,7 @@ const envSchema = z.object({
 
   // App
   APP_NAME: z.string().default('SkillValue AI Backend'),
+  DATABASE_URL: z.string().optional(),
   // Zalo integration
   ZALO_APP_ID: z.string().optional(),
   ZALO_APP_SECRET: z.string().optional(),
@@ -65,6 +66,7 @@ function loadEnv(): Env {
     RATE_LIMIT_MAX: process.env.RATE_LIMIT_MAX || '100',
     RATE_LIMIT_WINDOW: process.env.RATE_LIMIT_WINDOW || '60000',
     APP_NAME: process.env.APP_NAME || 'SkillValue AI Backend',
+    DATABASE_URL: process.env.DATABASE_URL,
   };
 
   const parsed = envSchema.safeParse(envVars);

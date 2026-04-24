@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { successResponse } from '../lib/response';
+import { billingService } from '../services/billing';
 import { adminService } from '../services/adminService';
 import { authenticate, authorize } from '../lib/auth';
 
@@ -154,6 +155,31 @@ const admin: FastifyPluginAsync = async (fastify) => {
           message: 'Failed to retrieve pending reviews',
         },
       });
+    }
+  });
+
+  // GET /api/admin/revenue
+  fastify.get('/admin/revenue', async (_request, reply) => {
+    try {
+      const invoices = billingService.getAllInvoices();
+      const txs = billingService.getAllTransactions();
+      const revenueInvoices = invoices
+        .filter((i) => i.status === 'paid')
+        .reduce((sum, i) => sum + i.amount, 0);
+      const revenueCharges = txs
+        .filter((t) => t.type === 'charge')
+        .reduce((sum, t) => sum + t.amount, 0);
+      const totalRevenue = revenueInvoices + revenueCharges;
+      return reply.send(
+        successResponse(
+          { totalRevenue, invoicesCount: invoices.length, txCount: txs.length },
+          'Revenue computed',
+        ),
+      );
+    } catch (error) {
+      return reply
+        .status(500)
+        .send({ error: { code: 'ADMIN_ERROR', message: 'Failed to compute revenue' } });
     }
   });
 

@@ -74,6 +74,40 @@
         </div>
     </header>
 
+    <!-- Packaging Hub (System Packaging) -->
+    <section id="packaging" class="section packaging">
+        <div class="section-header reveal">
+            <h2>Packaging the System</h2>
+            <p>Turn the repository into a product-ready package: code, docs, CI/CD, and mobile onboarding, all packaged as a repeatable flow.</p>
+        </div>
+        <div class="features-grid packaging-grid">
+            <div class="feature-card glass reveal">
+                <div class="icon-wrapper"><i data-lucide="cpu"></i></div>
+                <h3>Source Packaging</h3>
+                <p>Snapshot code, dependencies, types, and build config into a reproducible artifact.</p>
+            </div>
+            <div class="feature-card glass reveal delay-1">
+                <div class="icon-wrapper"><i data-lucide="zap"></i></div>
+                <h3>CI/CD & Build</h3>
+                <p>Automate tests, lint, typecheck and production build; ship with confidence.</p>
+            </div>
+            <div class="feature-card glass reveal delay-2">
+                <div class="icon-wrapper"><i data-lucide="book-open"></i></div>
+                <h3>Docs Portal</h3>
+                <p>Publish product documentation, roadmaps and contrib guidelines as a living portal.</p>
+            </div>
+            <div class="feature-card glass reveal delay-3">
+                <div class="icon-wrapper"><i data-lucide="smartphone"></i></div>
+                <h3>Mobile Onboarding</h3>
+                <p>QR-based onboarding and guides to access packaging features on mobile.</p>
+            </div>
+        </div>
+        <div style="text-align:center; margin: 2rem 0;">
+            <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://workai.app/packaging" alt="QR Packaging"/>
+            <div style="margin-top:8px; color:#9fb2d1;">QR for packaging onboarding</div>
+        </div>
+    </section>
+
     <!-- Features Section -->
     <section id="features" class="features">
         <div class="section-header reveal">
@@ -97,6 +131,71 @@
                 <p>Our AI analyzes your needs and instantly pairs you with the perfect human freelancer or AI agent in milliseconds.</p>
             </div>
         </div>
+    </section>
+
+    <!-- Packaging Timeline (Additional detail) -->
+    <section id="packaging-timeline" class="features" style="padding:6rem 2rem;">
+      <div class="section-header reveal">
+        <h2>Packaging Timeline</h2>
+        <p>End-to-end packaging flow from source to deployment and monitoring.</p>
+      </div>
+      <div class="timeline" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem;">
+        <div class="card glass" style="padding:1.25rem;">
+          <strong>1. Source</strong>
+          <p>Snapshot code, dep, TS types and configs.</p>
+        </div>
+        <div class="card glass" style="padding:1.25rem;">
+          <strong>2. Build & Test</strong>
+          <p>Lint, typecheck, unit/integration tests and artifact creation.</p>
+        </div>
+        <div class="card glass" style="padding:1.25rem;">
+          <strong>3. Docs</strong>
+          <p>Publish docs portal and API contracts for external consumption.</p>
+        </div>
+        <div class="card glass" style="padding:1.25rem;">
+          <strong>4. Deploy & Monitor</strong>
+          <p>Deploy to staging/production and observe with logs and metrics.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing & Monetization (Open Source monetization MVP) -->
+    <section id="pricing" class="section pricing" style="padding:6rem 2rem;">
+      <div class="section-header reveal">
+        <h2>Pricing & Monetization</h2>
+        <p>Choose a plan to unlock more AI power, faster matching and admin features. All changes are simulated in MVP.</p>
+      </div>
+      <div class="pricing-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem;">
+        <div class="card glass" style="padding:1.25rem;">
+          <h3>Free</h3>
+          <p>Basic access and standard matching</p>
+          <ul>
+            <li>CORE API access</li>
+            <li>Up to 2 requests/month</li>
+          </ul>
+          <button class="btn btn-outline" onclick="subscribePrompt('free')">Choose</button>
+        </div>
+        <div class="card glass" style="padding:1.25rem;">
+          <h3>Pro</h3>
+          <p>$29 / month</p>
+          <ul>
+            <li>Advanced analytics</li>
+            <li>Priority AI swarm</li>
+            <li>Higher request limits</li>
+          </ul>
+          <button class="btn btn-outline" onclick="subscribePrompt('pro')">Choose</button>
+        </div>
+        <div class="card glass" style="padding:1.25rem;">
+          <h3>Enterprise</h3>
+          <p>$199 / month</p>
+          <ul>
+            <li>Dedicated success manager</li>
+            <li>Custom integrations</li>
+            <li>SLA & governance</li>
+          </ul>
+          <button class="btn btn-outline" onclick="subscribePrompt('enterprise')">Choose</button>
+        </div>
+      </div>
     </section>
 
     <!-- Footer -->
@@ -129,6 +228,20 @@
     <script src="script.js"></script>
     <script>
       lucide.createIcons();
+    </script>
+    <script src="/landing/monetization.js"></script>
+    <script>
+      // Helper to trigger API-based subscription in MVP
+      function subscribePrompt(planId) {
+        // In MVP, userId is mocked via query or locale; we will use a demo user
+        const userId = 'demo_user';
+        if (!planId) return;
+        if (typeof window.subscribe === 'function') {
+          window.subscribe(userId, planId).catch(() => {});
+        } else {
+          alert('Subscription API not ready');
+        }
+      }
     </script>
 </body>
 </html>

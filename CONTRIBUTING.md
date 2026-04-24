@@ -27,6 +27,15 @@ WorkAI được tổ chức như một product workspace. Khi đóng góp, hãy 
 - Nếu sửa `mobile/`: kiểm tra thủ công các màn hình và flow bị ảnh hưởng trước khi mở PR.
 - Cập nhật docs nếu thay đổi tác động tới API, luồng người dùng hoặc vận hành repo.
 
+## Open Source Contributions
+
+- The WorkAI core is open; contributions are welcome via pull requests.
+- Follow the Conventional Commits format for commit messages.
+- Submissions should include tests and documentation updates where relevant.
+- Provide small, self-contained changes with clear motivation and impact.
+- If you discover security issues, follow the SECURITY.md process for private disclosure.
+- See LICENSE for licensing details and docs/open-source.md for governance.
+
 ## Commit and PR standards
 
 - Dùng [Conventional Commits](https://www.conventionalcommits.org/).
