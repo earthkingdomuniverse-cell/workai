@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { createdResponse, successResponse } from '../lib/response';
-import { authenticate } from '../lib/auth';
+import { requireAuthenticated } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { walletService } from '../services/walletService';
@@ -52,16 +52,8 @@ function notifyDealParticipantsBestEffort(input: {
   }
 }
 
-async function requireDealUser(request: any, reply: any): Promise<DealAuthUser> {
-  const user = await authenticate(request, reply);
-  if (!user || user.userId === 'guest_user') {
-    throw new AppError('Authentication required', { code: 'AUTHENTICATION_ERROR', statusCode: 401 });
-  }
-  return user;
-}
-
 async function resolveUserScopedDealFilters(request: any, reply: any, query: Record<string, string | undefined>) {
-  const user = await requireDealUser(request, reply);
+  const user = await requireAuthenticated(request, reply);
   const where: any = {};
 
   if (query.status) where.status = query.status;
@@ -154,7 +146,7 @@ const deals: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/deals', async (request, reply) => {
-    const user = await requireDealUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const body = request.body as Record<string, any>;
 
     if (!body.title || String(body.title).trim().length < 5) {
@@ -220,7 +212,7 @@ const deals: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/deals/:id', async (request, reply) => {
-    const user = await requireDealUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const { id } = request.params as { id: string };
     const deal = await prisma.deal.findUnique({ where: { id }, include: includeDealRelations });
 
@@ -236,7 +228,7 @@ const deals: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/deals/:id/fund', async (request, reply) => {
-    const user = await requireDealUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const { id } = request.params as { id: string };
     const body = request.body as { amount?: number; paymentMethodId?: string };
 
@@ -288,7 +280,7 @@ const deals: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/deals/:id/submit', async (request, reply) => {
-    const user = await requireDealUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const { id } = request.params as { id: string };
     const body = request.body as { milestoneId?: string };
     const existing = await prisma.deal.findUnique({ where: { id } });
@@ -328,7 +320,7 @@ const deals: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/deals/:id/release', async (request, reply) => {
-    const user = await requireDealUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const { id } = request.params as { id: string };
     const body = request.body as { amount?: number };
     const existing = await prisma.deal.findUnique({ where: { id }, include: includeDealRelations });
@@ -401,7 +393,7 @@ const deals: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/deals/:id/dispute', async (request, reply) => {
-    const user = await requireDealUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const { id } = request.params as { id: string };
     const body = request.body as { reason?: string; description?: string; reportedUserId?: string };
     const existing = await prisma.deal.findUnique({ where: { id } });
