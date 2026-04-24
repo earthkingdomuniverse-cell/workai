@@ -1,8 +1,10 @@
 import { PaymentProvider, PaymentProviderName } from './types';
 import { zaloPayProvider } from './zalopay';
+import { momoProvider } from './momo';
 
 const registry: Partial<Record<PaymentProviderName, PaymentProvider>> = {
   zalopay: zaloPayProvider,
+  momo: momoProvider,
 };
 
 export function getPaymentProvider(name: PaymentProviderName): PaymentProvider {
@@ -16,4 +18,4 @@ export function getPaymentProvider(name: PaymentProviderName): PaymentProvider {
 }
 
 export * from './types';
-export { zaloPayProvider };
+export { zaloPayProvider, momoProvider };
