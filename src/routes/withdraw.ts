@@ -1,20 +1,12 @@
 import { FastifyPluginAsync } from 'fastify';
-import { authenticate } from '../lib/auth';
+import { requireAuthenticated } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { walletService } from '../services/walletService';
 
-async function requireWithdrawUser(request: any, reply: any) {
-  const user = await authenticate(request, reply);
-  if (!user || user.userId === 'guest_user') {
-    throw new AppError('Authentication required', { code: 'AUTH_ERROR', statusCode: 401 });
-  }
-  return user;
-}
-
 const withdraw: FastifyPluginAsync = async (fastify) => {
   fastify.post('/withdraw', async (request, reply) => {
-    const user = await requireWithdrawUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const body = request.body as any;
     const amount = Number(body.amount);
 
@@ -75,7 +67,7 @@ const withdraw: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/withdraw', async (request, reply) => {
-    const user = await requireWithdrawUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
 
     const items = await prisma.transaction.findMany({
       where: {
