@@ -4,8 +4,7 @@ import { createProposalSchema, proposalFilterSchema, updateProposalSchema } from
 import { authenticate } from '../../lib/auth';
 import { successResponse, createdResponse } from '../../lib/response';
 import { AppError } from '../../lib/errors';
-import { getRequestById } from '../../mocks/requests';
-import { getOfferById } from '../../mocks/offers';
+import { prisma } from '../../lib/prisma';
 
 async function requireProposalUser(request: any, reply: any) {
   const user = await authenticate(request, reply);
@@ -16,6 +15,45 @@ async function requireProposalUser(request: any, reply: any) {
     });
   }
   return user;
+}
+
+async function resolveProposalReceiver(body: { requestId?: string; offerId?: string }) {
+  if (body.requestId) {
+    const requestRecord = await prisma.workRequest.findUnique({
+      where: { id: body.requestId },
+      select: { requesterId: true },
+    });
+
+    if (!requestRecord) {
+      throw new AppError('Request not found for proposal', {
+        code: 'NOT_FOUND',
+        statusCode: 404,
+      });
+    }
+
+    return requestRecord.requesterId;
+  }
+
+  if (body.offerId) {
+    const offerRecord = await prisma.offer.findUnique({
+      where: { id: body.offerId },
+      select: { providerId: true },
+    });
+
+    if (!offerRecord) {
+      throw new AppError('Offer not found for proposal', {
+        code: 'NOT_FOUND',
+        statusCode: 404,
+      });
+    }
+
+    return offerRecord.providerId;
+  }
+
+  throw new AppError('requestId or offerId is required', {
+    code: 'BAD_REQUEST',
+    statusCode: 400,
+  });
 }
 
 const proposalRoutes: FastifyPluginAsync = async (fastify) => {
@@ -130,42 +168,16 @@ const proposalRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       const body = parsed.data;
-      let receiverUserId: string | undefined;
+      const receiverUserId = await resolveProposalReceiver(body);
 
-      if (body.requestId) {
-        const requestRecord = getRequestById(body.requestId);
-        if (!requestRecord) {
-          throw new AppError('Request not found for proposal', {
-            code: 'NOT_FOUND',
-            statusCode: 404,
-          });
-        }
-        receiverUserId = requestRecord.requesterId;
-      }
-
-      if (!receiverUserId && body.offerId) {
-        const offerRecord = getOfferById(body.offerId);
-        if (!offerRecord) {
-          throw new AppError('Offer not found for proposal', {
-            code: 'NOT_FOUND',
-            statusCode: 404,
-          });
-        }
-        receiverUserId = offerRecord.providerId;
-      }
-
-      if (!receiverUserId) {
-        throw new AppError('Unable to resolve proposal counterparty', {
+      if (receiverUserId === user.userId) {
+        throw new AppError('Cannot send a proposal to yourself', {
           code: 'BAD_REQUEST',
           statusCode: 400,
         });
       }
 
-      const proposal = await proposalService.createProposal(
-        body,
-        user.userId,
-        receiverUserId,
-      );
+      const proposal = await proposalService.createProposal(body, user.userId, receiverUserId);
       return createdResponse(reply, proposal);
     },
   );
