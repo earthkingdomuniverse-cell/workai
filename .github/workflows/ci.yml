@@ -76,8 +76,8 @@ jobs:
       - name: Apply migrations
         run: npx prisma migrate deploy
 
-      - name: Validate schema matches migrations
-        run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "$DATABASE_URL" --exit-code
+      - name: Validate migrated database matches schema
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
 
   mobile:
     name: Mobile checks
