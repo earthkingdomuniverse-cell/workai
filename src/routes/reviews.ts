@@ -1,18 +1,10 @@
 import { FastifyPluginAsync } from 'fastify';
 import { createdResponse, successResponse } from '../lib/response';
-import { authenticate } from '../lib/auth';
+import { requireAuthenticated } from '../lib/auth';
 import { ReviewAggregate } from '../types/review';
 import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { notificationService } from '../services/notificationService';
-
-async function requireReviewUser(request: any, reply: any) {
-  const user = await authenticate(request, reply);
-  if (!user || user.userId === 'guest_user') {
-    throw new AppError('Authentication required', { code: 'AUTHENTICATION_ERROR', statusCode: 401 });
-  }
-  return user;
-}
 
 function notifyReviewBestEffort(task: Promise<any>) {
   task.catch((error) => {
@@ -160,7 +152,7 @@ const reviews: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/reviews', async (request, reply) => {
-    const user = await requireReviewUser(request, reply);
+    const user = await requireAuthenticated(request, reply);
     const body = request.body as Record<string, any>;
 
     if (!body.dealId || !body.subjectType || !body.subjectId) {
