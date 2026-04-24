@@ -4,6 +4,7 @@ import { authenticate } from '../lib/auth';
 import { ReviewAggregate } from '../types/review';
 import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
+import { notificationService } from '../services/notificationService';
 
 async function requireReviewUser(request: any, reply: any) {
   const user = await authenticate(request, reply);
@@ -11,6 +12,12 @@ async function requireReviewUser(request: any, reply: any) {
     throw new AppError('Authentication required', { code: 'AUTHENTICATION_ERROR', statusCode: 401 });
   }
   return user;
+}
+
+function notifyReviewBestEffort(task: Promise<any>) {
+  task.catch((error) => {
+    console.warn('Review notification hook failed:', error?.message || error);
+  });
 }
 
 function serializeReview(review: any, subjectType: 'user' | 'offer' = 'user') {
@@ -252,6 +259,13 @@ const reviews: FastifyPluginAsync = async (fastify) => {
       },
       include: reviewInclude,
     });
+
+    notifyReviewBestEffort(notificationService.notifyReviewReceived({
+      userId: subjectId,
+      dealId: deal.id,
+      reviewId: review.id,
+      rating,
+    }));
 
     return createdResponse(reply, serializeReview(review, subjectType));
   });
