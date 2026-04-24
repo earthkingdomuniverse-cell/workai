@@ -42,7 +42,7 @@
     "@fastify/swagger-ui": "^3.0.0",
     "@prisma/client": "^7.8.0",
     "dotenv": "^17.4.2",
-    "expo": "^51.0.0",
+    "expo": "^55.0.17",
     "fastify": "^4.28.1",
     "highlight.js": "^11.8.0",
     "jose": "^6.2.2",
