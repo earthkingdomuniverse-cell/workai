@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: workai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    depends_on:
+      - db
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://postgres:postgres@db:5432/workai
+      JWT_SECRET: change_this_super_secret_key_please_123456
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3000:3000"
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
+
+volumes:
+  postgres_data:
