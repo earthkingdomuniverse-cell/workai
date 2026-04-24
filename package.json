@@ -1,7 +1,7 @@
 {
-  "name": "skillvalue-ai-backend",
+  "name": "workai-backend",
   "version": "1.0.0",
-  "description": "SkillValue AI Backend - Official Product 1.0",
+  "description": "WorkAI Backend - Marketplace, Wallet, Escrow, and Payment Infrastructure",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -15,12 +15,10 @@
     "test:coverage": "vitest run --coverage",
     "security-check": "audit-ci --critical",
     "prepare": "husky",
-
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
