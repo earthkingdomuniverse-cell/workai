@@ -39,13 +39,29 @@ export async function authenticate(
   return user;
 }
 
+export async function requireAuthenticated(
+  request: FastifyRequest,
+  reply?: FastifyReply,
+): Promise<AuthContext> {
+  const user =
+    ((request as any).user as AuthContext | undefined) || (await authenticate(request, reply));
+
+  if (!user || user.userId === 'guest_user') {
+    throw new AppError('Authentication required', {
+      code: 'AUTHENTICATION_ERROR',
+      statusCode: 401,
+    });
+  }
+
+  return user;
+}
+
 export async function authorize(
   request: FastifyRequest,
   reply: FastifyReply,
   roles: Role[],
 ): Promise<void> {
-  const user =
-    ((request as any).user as AuthContext | undefined) || (await authenticate(request, reply));
+  const user = await requireAuthenticated(request, reply);
 
   if (!roles.includes(user.role)) {
     throw new AppError('Member role is not allowed to access this resource', {
