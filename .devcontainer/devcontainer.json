@@ -1,0 +1,11 @@
+{
+  "name": "WorkAI Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:18",
+  "workspaceFolder": "/workspaces/workai",
+  "forwardPorts": [3000, 19000],
+  "postCreateCommand": "npm ci && (cd mobile && npm ci)",
+  "remoteUser": "codespace",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  }
+}

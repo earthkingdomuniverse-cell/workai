@@ -27,6 +27,11 @@ export const config = {
   openai: {
     apiKey: env.OPENAI_API_KEY,
   },
+  zalo: {
+    appId: env.ZALO_APP_ID,
+    appSecret: env.ZALO_APP_SECRET,
+    webhookSecret: env.ZALO_WEBHOOK_SECRET,
+  },
   rateLimit: {
     max: parseInt(env.RATE_LIMIT_MAX, 10),
     window: parseInt(env.RATE_LIMIT_WINDOW, 10),

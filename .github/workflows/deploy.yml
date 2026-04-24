@@ -1,46 +1,42 @@
-name: 📚 GitHub Pages
+name: Deploy Backend
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - docs/**
-      - README.md
-      - .github/workflows/deploy.yml
   workflow_dispatch:
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+  push:
+    branches: [ main ]
 
 jobs:
-  deploy:
-    name: 📚 Publish Docs Portal
+  build-and-deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url || '' }}
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v6
-
-      - name: ⚙️ Setup Pages
-        id: pages
-        continue-on-error: true
-        uses: actions/configure-pages@v5
-
-      - name: 📦 Upload Pages artifact
-        if: steps.pages.outcome == 'success'
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          path: docs
-
-      - name: 🚀 Deploy to GitHub Pages
-        id: deployment
-        if: steps.pages.outcome == 'success'
-        uses: actions/deploy-pages@v4
+          node-version: '18'
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Build Docker image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/workai-backend:latest .
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push Docker image
+        run: docker push ghcr.io/${{ github.repository }}/workai-backend:latest
+      - name: Deploy to Production (SSH)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: 22
+          script: |
+            docker pull ghcr.io/${{ github.repository }}/workai-backend:latest
+            docker rm -f workai-backend || true
+            docker run -d --name workai-backend -p 3000:3000 --restart unless-stopped ghcr.io/${{ github.repository }}/workai-backend:latest

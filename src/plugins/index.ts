@@ -5,11 +5,18 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
 import { config } from '../config';
 import { logger } from '../lib';
 
 export const registerPlugins: FastifyPluginAsync = async (fastify) => {
   await fastify.register(sensible);
+
+  await fastify.register(fastifyStatic, {
+    root: path.join(__dirname, '../../landing'),
+    prefix: '/',
+  });
 
   await fastify.register(helmet, {
     contentSecurityPolicy: config.flags.enableMockMode

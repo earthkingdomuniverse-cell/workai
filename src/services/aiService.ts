@@ -2,6 +2,15 @@ import { AiMatchInput, AiMatchOutput, AiRecommendation } from '../types/ai';
 import { SupportTicketInput, SupportTicketOutput } from '../types/support';
 import { mockOffers } from '../mocks/offers';
 import { aiSupportService } from './aiSupportService';
+import { OpenAI } from 'openai';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const openai = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY || 'dummy_key',
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+});
 
 export interface PriceSuggestionInput {
   title: string;
@@ -102,22 +111,55 @@ class AiServiceImpl implements AiService {
   }
 
   async suggestPrice(input: PriceSuggestionInput): Promise<PriceSuggestionOutput> {
-    const skillWeight = input.skills.length * 120;
-    const titleWeight = Math.max(50, input.title.length * 6);
-    const multiplier =
-      input.providerLevel === 'expert' ? 1.5 : input.providerLevel === 'intermediate' ? 1 : 0.7;
-    const base = Math.round((skillWeight + titleWeight) * multiplier);
+    try {
+      const prompt = `You are an AI pricing expert for a freelance marketplace.
+Given a service titled "${input.title}" with skills [${input.skills.join(', ')}] by a provider at "${input.providerLevel}" level.
+Suggest a fair market price in USD. Return strictly JSON with the following format:
+{
+  "suggested_price": number,
+  "floor_price": number,
+  "ceiling_price": number,
+  "reasoning": ["reason 1", "reason 2"]
+}
+Output ONLY valid JSON, without any markdown formatting like \`\`\`json.`;
 
-    return {
-      suggested_price: base,
-      floor_price: Math.round(base * 0.75),
-      ceiling_price: Math.round(base * 1.3),
-      reasoning: [
-        `Estimated from ${input.skills.length} declared skills`,
-        `Adjusted for ${input.providerLevel} provider level`,
-        'Applied heuristic market range fallback',
-      ],
-    };
+      const response = await openai.chat.completions.create({
+        model: 'mistralai/mixtral-8x22b-instruct-v0.1',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 300,
+      });
+
+      let content = response.choices[0]?.message?.content || '{}';
+      content = content
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+      const parsed = JSON.parse(content);
+
+      if (parsed.suggested_price) {
+        return parsed as PriceSuggestionOutput;
+      }
+      throw new Error('Invalid AI JSON format');
+    } catch (err: any) {
+      console.error('NVIDIA AI Price Error, falling back to heuristics:', err.message);
+      const skillWeight = input.skills.length * 120;
+      const titleWeight = Math.max(50, input.title.length * 6);
+      const multiplier =
+        input.providerLevel === 'expert' ? 1.5 : input.providerLevel === 'intermediate' ? 1 : 0.7;
+      const base = Math.round((skillWeight + titleWeight) * multiplier);
+
+      return {
+        suggested_price: base,
+        floor_price: Math.round(base * 0.75),
+        ceiling_price: Math.round(base * 1.3),
+        reasoning: [
+          `Estimated from ${input.skills.length} declared skills (Fallback mode)`,
+          `Adjusted for ${input.providerLevel} provider level`,
+          'Applied heuristic market range fallback',
+        ],
+      };
+    }
   }
 
   async support(input: SupportTicketInput): Promise<SupportTicketOutput> {

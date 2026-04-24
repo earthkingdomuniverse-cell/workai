@@ -169,7 +169,178 @@
             >Open Security</a
           >
         </div>
-      </section>
+  </section>
+
+  <section class="section ai-home" id="ai-home">
+    <h2>100% AI-Operated Employment Social Network</h2>
+    <p>WorkAI evolves into a social job network where AI handles onboarding, matching, content generation, engagement, trust scoring and dispute resolution. Humans monitor governance and safety, but day-to-day operations are driven by AI at scale.</p>
+    <div class="grid">
+      <div class="card"><strong>AI Matchmaking</strong><p>Automated, contextual matching between clients and professionals based on skills, availability, and history.</p></div>
+      <div class="card"><strong>AI Profiles & Posts</strong><p>Auto-generated profiles, activity feeds, and job posts to showcase capabilities and domain authority.</p></div>
+      <div class="card"><strong>Social Interactions</strong><p>Followers, endorsements, collaboration threads, and peer-to-peer reviews.</p></div>
+      <div class="card"><strong>Trust & Governance</strong><p>AI-driven risk scoring, automated dispute resolution, with lightweight human oversight when needed.</p></div>
+    </div>
+  </section>
+
+  <section class="section qr-section" id="mobile-access">
+    <h2>Access on Mobile via QR Bot</h2>
+    <p>Quét mã QR để khởi chạy trợ lý AI trên thiết bị di động. Trợ lý sẽ hướng dẫn đăng nhập, khám phá và bắt đầu giao dịch trên mobile.</p>
+    <div style="text-align:center;">
+      <canvas id="qr-bot" width="210" height="210"></canvas>
+    </div>
+    <p style="text-align:center; color:#9fb2d1; font-size:0.9rem;">QR bot link: https://workai.app/mobile-bot</p>
+  </section>
+
+  <!-- QR Scanner (WebCam) -->
+  <section class="section qr-scanner" id="qr-scanner">
+    <h2>QR Scanner (Webcam)</h2>
+    <p>Use your webcam to scan a QR code and navigate to the linked resource.</p>
+    <div id="qr-scanner-region" style="width:420px; height:320px; margin: 0 auto; border:1px solid #333; border-radius:8px; display:block;"></div>
+    <p id="qr-status" style="text-align:center; color:#9fb2d1; font-size:0.9rem; margin-top:8px;"></p>
+  </section>
+
+  <!-- Business Landing Section -->
+  <section class="section business-landing" id="business-landing">
+    <h2>Business Hub</h2>
+    <p>Launch a high-velocity, AI-powered employment social network for your organization with a plug-and-play homepage, QR onboarding for mobile users, scalable AI-driven matching, and secure governance.</p>
+    <div class="grid">
+      <div class="card"><strong>Time-to-Value</strong><p>Created, configured and ready to onboard teams in days, not weeks.</p></div>
+      <div class="card"><strong>AI-Driven Operations</strong><p>AI handles matching, pricing and trust signals to accelerate deals.</p></div>
+      <div class="card"><strong>Mobile Onboarding</strong><p>QR onboarding enables instant mobile sign-up and exploration.</p></div>
+    </div>
+    <div style="text-align:center; margin-top:16px;">
+      <canvas id="qr-onboard" width="210" height="210"></canvas>
+      <div style="margin-top:8px; color:#9fb2d1; font-size:0.9rem;">Scan to start onboarding on mobile</div>
+    </div>
+  </section>
+
+  <section class="section public-access" id="public-access">
+    <h2>Public Access (Codespaces)</h2>
+    <p>Để cho khách hàng truy cập từ bên ngoài, bạn có thể xuất bản cổng từ Codespaces. Mục tiêu là có một URL public để gọi API backend (ví dụ health/offers) từ Internet.</p>
+    <ol>
+      <li>Trong Codespace, mở tab Ports. Chọn cổng 3000 và bật Public (Expose public port).</li>
+      <li>Trình duyệt sẽ hiển thị một URL public như: https://<codespace-name>-3000.preview.app.github.dev/</li>
+      <li>Kiểm tra endpoint, ví dụ health:
+        <code>https://<codespace-name>-3000.preview.app.github.dev/api/v1/health</code>
+      </li>
+      <li>Lưu ý: URL công khai này là tạm thời và phụ thuộc trạng thái codespace. Có thể mất khi codespace dừng hoặc bị xóa.</li>
+    </ol>
+    <p>Nếu không có quyền expose port công khai từ Codespaces, dùng ngrok làm giải pháp tạm thời (tài liệu ngắn gọn bên dưới):</p>
+    <pre><code>ngrok http 3000</code></pre>
+    <p>Ngrok sẽ trả về một URL công khai, ví dụ https://abcd1234.ngrok.io, bạn có thể dùng cho các thử nghiệm nhanh.</p>
+  </section>
+
+  <section class="section docs-index" id="docs-index">
+    <h2>Documentation</h2>
+    <div style="margin: 8px 0; text-align:left;">
+      <input id="docs-search" placeholder="Search docs" style="padding:8px; width:240px; border-radius:6px; border:1px solid #444;"/>
+    </div>
+    <div id="docs-index-list" style="margin-top:8px;"></div>
+  </section>
+
+  <section class="section zalo-integration" id="zalo-integration">
+    <h2>Zalo Integration</h2>
+    <p>Hệ thống vận hành xã hội kiếm tiền và trao đổi kỹ năng thông qua nền tảng Zalo. Người dùng có thể nhận việc, đề xuất kỹ năng và thanh toán qua Zalo Pay.</p>
+    <div class="grid">
+      <div class="card"><strong>Zalo Official Account</strong><p>OA được dùng để broadcast, nhận tin nhắn và tương tác với người dùng trên Zalo.</p></div>
+      <div class="card"><strong>Automated Matching</strong><p>AI tự động ghép người lao động với yêu cầu công việc dựa trên kỹ năng và lịch làm việc.</p></div>
+      <div class="card"><strong>Payments via Zalo Pay</strong><p>Thanh toán an toàn và thuận tiện thông qua Zalo Pay cho người lao động và nhà tuyển dụng.</p></div>
+      <div class="card"><strong>QR Bot on Zalo</strong><p>QR bot cho phép khách hàng bắt đầu tương tác với hệ thống trên thiết bị di động qua Zalo.</p></div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.6/dist/html5-qrcode.min.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      // QR Bot generation (existing): keep as is
+      try {
+        var canvas = document.getElementById('qr-bot');
+        if (canvas && typeof QRCode !== 'undefined') {
+          var data = 'https://workai.app/mobile';
+          QRCode.toCanvas(canvas, data, { width: 210, margin: 2 }, function (err) {
+            if (err) console.error('QR generation error', err);
+          });
+        }
+      } catch (e) {
+        console.error('QR bot init error', e);
+      }
+
+      // Initialize QR Scanner (Webcam) using html5-qrcode
+      try {
+        const qrRegion = document.getElementById('qr-scanner-region');
+        if (qrRegion && typeof Html5Qrcode !== 'undefined') {
+          const html5QrCode = new Html5Qrcode("qr-scanner-region");
+          const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+          html5QrCode.start({ facingMode: 'environment' }, config, (decodedText, decodedResult) => {
+            // Stop after first success
+            html5QrCode.stop().then(() => {
+              document.getElementById('qr-status').innerText = `Scanned: ${decodedText}`;
+              if (decodedText.startsWith('http')) {
+                window.location.href = decodedText;
+              }
+            }).catch(() => {});
+          }).catch((err) => {
+            document.getElementById('qr-status').innerText = 'Cannot start scanner: ' + err;
+          });
+        }
+      } catch (e) {
+        console.error('QR scanner init error', e);
+      }
+
+      // Initialize onboarding QR (for business landing)
+      try {
+        var onboardCanvas = document.getElementById('qr-onboard');
+        if (onboardCanvas && typeof QRCode !== 'undefined') {
+          QRCode.toCanvas(onboardCanvas, 'https://workai.app/signup', { width: 210, margin: 2 }, function (err) {
+            if (err) console.error('QR onboarding generation error', err);
+          });
+        }
+      } catch (e) {
+        console.error('QR onboarding init error', e);
+      }
+    });
+  </script>
+
+  <script>
+    // Render docs index dynamically from docs/docs-index.json
+    async function renderDocsIndex() {
+      try {
+        const res = await fetch('/docs-index.json');
+        if (!res.ok) return;
+        const items = await res.json();
+        const container = document.getElementById('docs-index-list');
+        if (!container) return;
+        const ul = document.createElement('ul');
+        const query = (document.getElementById('docs-search')?.value || '').toLowerCase();
+        items
+          .sort((a, b) => a.order - b.order)
+          .filter((it) => !query || (it.title || '').toLowerCase().includes(query))
+          .forEach((it) => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = it.path;
+          a.textContent = it.title || it.id;
+          li.appendChild(a);
+          ul.appendChild(li);
+        });
+        container.innerHTML = '';
+        container.appendChild(ul);
+      } catch (err) {
+        console.error('Failed to load docs index', err);
+      }
+    }
+
+    // Re-render on input
+    document.addEventListener('DOMContentLoaded', () => {
+      const search = document.getElementById('docs-search');
+      if (search) {
+        search.addEventListener('input', renderDocsIndex);
+      }
+      renderDocsIndex();
+    });
+    // Also re-render on load to fill content when script loads after DOM
+  </script>
 
       <section class="grid section">
         <article class="card">

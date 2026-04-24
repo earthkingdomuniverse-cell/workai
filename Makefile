@@ -1,4 +1,5 @@
 # SkillValue AI - Development Commands
+ROOT := $(shell pwd)
 
 .PHONY: help install dev backend mobile test lint format clean
 
@@ -16,53 +17,53 @@ help:
 
 install:
 	@echo "📦 Installing dependencies..."
-	cd /Users/lha/Documents/workai && npm install
-	cd /Users/lha/Documents/workai/mobile && npm install
+	cd $(ROOT) && npm install
+	cd $(ROOT)/mobile && npm install
 
 dev:
 	@echo "🔧 Starting development..."
-	cd /Users/lha/Documents/workai && npm run dev
+	cd $(ROOT) && npm run dev
 
 backend:
 	@echo "🖥️  Starting backend..."
-	cd /Users/lha/Documents/workai && npx tsx watch src/server.ts
+	PORT=3001 npx tsx watch src/server.ts
 
 mobile:
 	@echo "📱 Starting mobile app..."
-	cd /Users/lha/Documents/workai/mobile && npx expo start
+	cd $(ROOT)/mobile && npx expo start
 
 test:
 	@echo "🧪 Running tests..."
-	cd /Users/lha/Documents/workai && npm test
+	cd $(ROOT) && npm test
 
 api-test:
 	@echo "🧪 Running API tests..."
 	@echo ""
-	bash /Users/lha/Documents/workai/scripts/test-api.sh
+	bash $(ROOT)/scripts/test-api.sh
 
 api-interactive:
 	@echo "🧪 Running interactive API simulator..."
-	node /Users/lha/Documents/workai/scripts/user-simulator.mjs
+	node $(ROOT)/scripts/user-simulator.mjs
 
 lint:
 	@echo "🔍 Running linter..."
-	cd /Users/lha/Documents/workai && npx eslint src --ext .ts
-	cd /Users/lha/Documents/workai/mobile && npx eslint . --ext .ts,.tsx
+	cd $(ROOT) && npx eslint src --ext .ts
+	cd $(ROOT)/mobile && npx eslint . --ext .ts,.tsx
 
 format:
 	@echo "🎨 Formatting code..."
-	cd /Users/lha/Documents/workai && npx prettier --write "src/**/*.ts"
-	cd /Users/lha/Documents/workai/mobile && npx prettier --write "**/*.{ts,tsx}"
+	cd $(ROOT) && npx prettier --write "src/**/*.ts"
+	cd $(ROOT)/mobile && npx prettier --write "**/*.{ts,tsx}"
 
 typecheck:
 	@echo "🔎 Type checking..."
-	cd /Users/lha/Documents/workai && npx tsc --noEmit
-	cd /Users/lha/Documents/workai/mobile && npx tsc --noEmit
+	cd $(ROOT) && npx tsc --noEmit
+	cd $(ROOT)/mobile && npx tsc --noEmit
 
 clean:
 	@echo "🧹 Cleaning..."
-	rm -rf /Users/lha/Documents/workai/node_modules/.cache
-	rm -rf /Users/lha/Documents/workai/mobile/node_modules/.cache
+	rm -rf $(ROOT)/node_modules/.cache
+	rm -rf $(ROOT)/mobile/node_modules/.cache
 
 # Quick test shortcuts
 tapi: api-test

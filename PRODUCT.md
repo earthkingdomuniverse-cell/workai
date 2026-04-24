@@ -46,3 +46,4 @@ Marketplace dịch vụ thường gặp 4 điểm nghẽn:
 - Có quy trình feedback, issue intake, release và security policy.
 - Có portal tài liệu và roadmap public-facing.
 - Có hạ tầng GitHub-native để vận hành liên tục thay vì chỉ lưu source code.
+- Zalo Platform Integration: Mạng xã hội việc làm được tối ưu cho thị trường Việt Nam bằng nền tảng Zalo OA và Zalo Pay, hỗ trợ AI-driven matching, payments, và các kênh tương tác người dùng trên một nền tảng phổ biến tại VN.

@@ -14,6 +14,7 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   const ai = (await import('./ai')).default;
   const recommendations = (await import('./recommendations')).default;
   const admin = (await import('./admin')).default;
+  const zalo = (await import('./zalo')).default;
 
   await fastify.register(health);
   await fastify.register(auth);
@@ -26,6 +27,7 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(reviews);
   await fastify.register(ai);
   await fastify.register(recommendations);
+  await fastify.register(zalo);
   await fastify.register(admin);
 
   logger.info(`✅ Routes registered`);

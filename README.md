@@ -80,7 +80,7 @@ cp .env.example .env
 - `OPENAI_API_KEY=` optional
 - `EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1`
 
-## Run Backend Dev
+## Run Backend Dev (Local)
 
 ```bash
 npm run dev
@@ -91,6 +91,24 @@ Backend URLs:
 - Health: `http://localhost:3000/health`
 - Swagger: `http://localhost:3000/docs`
 - API base: `http://localhost:3000/api/v1`
+
+## Run in GitHub Codespaces
+
+WorkAI supports GitHub Codespaces. A dev container is defined under `.devcontainer` and will be used automatically when you create a codespace.
+
+- Create a codespace from the repository (main branch).
+- The container will install dependencies automatically (root and mobile).
+- Forwarded ports: 3000 (backend) and 19000 (Expo dev server).
+- Start backend: open a terminal in codespace and run:
+  - `npm run dev`
+- Start mobile (Expo): in another terminal, run:
+  - `cd mobile && npm ci && npx expo start --tunnel`
+- You can connect from a physical device using Expo's QR code with tunnel connectivity.
+
+Notes:
+
+- In codespaces, the backend is available at the codespace-assigned URL with port 3000 (e.g., http://<codespace-id>:3000).
+- If you run Expo in tunnel mode, ensure you use the tunnel URL/QR to connect your device.
 
 ## Run Backend Build
 

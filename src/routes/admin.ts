@@ -40,24 +40,31 @@ const admin: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // POST /api/admin/disputes/:id/resolve
-  fastify.post('/admin/disputes/:id/resolve', async (request, reply) => {
+  // PATCH /api/admin/disputes/:id
+  fastify.patch('/admin/disputes/:id', async (request, reply) => {
     const { id } = request.params as any;
-    const { resolution } = request.body as any;
+    const { action, resolution } = request.body as any;
     const user = (request as any).user as { userId?: string; id?: string };
 
+    if (action !== 'resolve' && action !== 'reject') {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Action must be resolve or reject' },
+      });
+    }
+
     try {
-      const dispute = await adminService.resolveDispute(
+      const dispute = await adminService.updateDisputeStatus(
         id,
+        action,
         resolution,
         user.userId || user.id || 'system',
       );
-      return reply.send(successResponse(dispute, 'Dispute resolved successfully'));
+      return reply.send(successResponse(dispute, `Dispute ${action}d successfully`));
     } catch (error: any) {
       return reply.status(500).send({
         error: {
           code: 'ADMIN_ERROR',
-          message: error.message || 'Failed to resolve dispute',
+          message: error.message || `Failed to ${action} dispute`,
         },
       });
     }
