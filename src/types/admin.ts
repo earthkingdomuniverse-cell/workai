@@ -105,6 +105,14 @@ export interface FraudSignal {
   updatedAt: string;
 }
 
+export type ReviewModerationStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'held'
+  | 'flagged'
+  | 'removed';
+
 export interface ReviewModeration {
   id: string;
   reviewId: string;
@@ -112,8 +120,8 @@ export interface ReviewModeration {
   subjectId: string;
   content: string;
   rating: number;
-  status: 'pending' | 'approved' | 'flagged' | 'removed';
-  flags: ReviewFlag[];
+  status: ReviewModerationStatus;
+  flags: ReviewFlag[] | string[];
   createdAt: string;
   reviewedBy?: string;
   reviewedAt?: string;
