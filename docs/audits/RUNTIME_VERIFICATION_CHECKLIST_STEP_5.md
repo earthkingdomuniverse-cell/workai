@@ -20,6 +20,15 @@ Recent hardening included:
 - Deal read endpoints are authenticated and participant/operator/admin scoped.
 - Payment create/status endpoints are authenticated and scoped.
 - Withdraw list endpoint now rejects guest users.
+- Mobile login/signup UI has been implemented.
+- Public onboarding no longer allows users to self-select `operator` or `admin` roles.
+- Mobile admin overview now calls backend `/admin/overview` through `adminService`.
+- Backend admin routes now use normalized `{ data, meta }` response shape.
+- Backend notification routes have been added and registered.
+- Notification persistence has been added through Prisma `Notification` and `NotificationPreference` models.
+- Backend AI now includes `/ai/next-action`.
+- Mobile Home and AI Next Action screens now call `aiService.nextAction()`.
+- GitHub Actions CI has been added for backend and mobile static checks.
 
 ---
 
@@ -60,6 +69,9 @@ Potential risk areas:
 - Prisma relation filters introduced in `reviews.ts`.
 - AuthContext role checks in `payments.ts`.
 - Deal filter `OR` query in `deals.ts`.
+- Notification Prisma models and route calls in `notifications.ts`.
+- Admin response normalization.
+- AI next-action response shape.
 
 ## 4. Backend build
 
@@ -86,16 +98,24 @@ Expected:
 - points to local/staging PostgreSQL.
 - never points to production while running tests.
 
-## 2. Run migrations
+## 2. Create local notification migration
+
+Because notification persistence changed Prisma schema, local dev should create/apply the migration:
+
+```bash
+npx prisma migrate dev --name add_notifications
+```
+
+Expected:
+
+- migration includes `Notification` and `NotificationPreference` tables.
+- Prisma client is regenerated.
+
+## 3. Deploy migrations in CI/staging/production
 
 ```bash
 npx prisma migrate deploy
-```
-
-or for local development:
-
-```bash
-npx prisma migrate dev
+npx prisma generate
 ```
 
 Expected:
@@ -113,8 +133,10 @@ Expected:
   - Review
   - Dispute
   - PaymentAuditLog
+  - Notification
+  - NotificationPreference
 
-## 3. Optional seed
+## 4. Optional seed
 
 Use seed only against local/staging.
 
@@ -476,7 +498,86 @@ Expected:
 
 ---
 
-# Phase 10 - Withdraw smoke test
+# Phase 10 - Notifications smoke test
+
+## 1. Unauthenticated notification list should fail
+
+```bash
+curl http://localhost:3000/api/v1/notifications
+```
+
+Expected:
+
+- 401 authentication required.
+
+## 2. Authenticated notification list should seed and return persistent rows
+
+```bash
+curl http://localhost:3000/api/v1/notifications \
+  -H "Authorization: Bearer $CLIENT_TOKEN"
+```
+
+Expected:
+
+- returns `{ data: { items, total, unreadCount } }`.
+- if user has no notifications yet, backend seeds default persistent notifications.
+- rows are stored in Prisma `Notification`.
+
+## 3. Unread count
+
+```bash
+curl http://localhost:3000/api/v1/notifications/unread-count \
+  -H "Authorization: Bearer $CLIENT_TOKEN"
+```
+
+Expected:
+
+- returns `{ data: { count } }`.
+
+## 4. Preferences
+
+```bash
+curl http://localhost:3000/api/v1/notifications/preferences \
+  -H "Authorization: Bearer $CLIENT_TOKEN"
+```
+
+Expected:
+
+- returns persisted or default preferences.
+- row exists in Prisma `NotificationPreference` after first call.
+
+## 5. Update preferences
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/notifications/preferences \
+  -H "Authorization: Bearer $CLIENT_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"push":false,"types":{"system":true,"deals":true}}'
+```
+
+Expected:
+
+- updates persisted preferences for current user only.
+
+---
+
+# Phase 11 - AI smoke test
+
+## 1. AI next action
+
+```bash
+curl -X POST http://localhost:3000/api/v1/ai/next-action \
+  -H 'Content-Type: application/json' \
+  -d '{"context":{"role":"member","onboardingCompleted":true,"offersCount":0,"requestsCount":1,"dealsCount":0,"proposalsCount":0}}'
+```
+
+Expected:
+
+- returns `{ data: { actions, summary } }`.
+
+---
+
+# Phase 12 - Withdraw smoke test
 
 ## 1. Unauthenticated withdraw list should fail
 
@@ -501,7 +602,7 @@ Expected:
 
 ---
 
-# Phase 11 - Mobile static checks
+# Phase 13 - Mobile static checks
 
 ## 1. Install mobile dependencies
 
@@ -529,6 +630,11 @@ Known recent fixes to verify:
 - `apiClient` has default export.
 - `admin/overview.tsx` no longer has duplicated JSX.
 - proposal/AI/deal services parse `{ data, meta }` correctly.
+- login/signup screens compile.
+- onboarding does not mutate system role.
+- admin overview imports and uses `adminService`.
+- Home imports and uses `aiService.nextAction()`.
+- AI Next Action screen imports and uses `aiService.nextAction()`.
 
 ## 3. Start Expo
 
@@ -543,7 +649,7 @@ Expected:
 
 ---
 
-# Phase 12 - Mobile runtime smoke test
+# Phase 14 - Mobile runtime smoke test
 
 ## Screens to open
 
@@ -551,33 +657,39 @@ Expected:
 2. Signup
 3. Onboarding intro
 4. Role select
-5. Home
-6. Explore
-7. Offers
-8. Requests
-9. Proposals
-10. Deals
-11. AI
-12. Inbox
-13. Activity
-14. Profile
-15. Admin as member
-16. Admin as operator/admin
+5. Profile setup
+6. Skills setup
+7. Goals setup
+8. Home
+9. Explore
+10. Offers
+11. Requests
+12. Proposals
+13. Deals
+14. AI
+15. AI Match
+16. AI Price
+17. AI Support
+18. AI Next Action
+19. Inbox
+20. Activity
+21. Profile
+22. Admin as member
+23. Admin as operator/admin
 
 ## Expected results
 
 - App boots.
 - No red screen.
+- Login/signup forms render.
+- Public onboarding does not offer operator/admin role selection.
+- Home renders AI next action card.
+- AI Next Action screen renders backend-generated actions.
+- Notification inbox does not 404 after backend migration.
 - Tabs render.
 - Member cannot access admin.
 - Operator/admin can access admin overview.
 - Deals tab does not fail due to `providerId=me` or `clientId=me`.
-
-## Known mobile gaps still expected
-
-- Login/signup UI may still be placeholder.
-- Notification service may fallback because backend notification routes do not exist yet.
-- Admin overview does not yet use backend `/admin/overview` directly.
 
 ---
 
@@ -587,12 +699,15 @@ Expected:
 
 - Backend typecheck passes.
 - Backend build passes.
+- Prisma migration for notifications has been applied.
 - Backend starts.
 - Auth smoke test passes.
 - Offer/request/proposal smoke test passes.
 - Deal participant access control passes.
 - Transactions/receipts return Prisma-backed records.
 - Trust `/me` requires auth and returns real user profile.
+- Notifications require auth and return Prisma-backed rows.
+- AI next-action returns `{ actions, summary }`.
 - Mobile TypeScript compiles.
 - Expo starts without syntax/import errors.
 
@@ -600,7 +715,6 @@ Expected:
 
 - Production launch.
 - Payment processor full live settlement.
-- Notification production readiness.
 - Full App Store readiness.
 - Security audit completion.
 
@@ -608,8 +722,8 @@ Expected:
 
 # Next engineering steps after this checklist
 
-1. Implement real mobile login/signup UI.
-2. Add backend notification routes or remove fake notification calls.
-3. Add mobile adminService and call backend admin endpoints.
-4. Add AI next-action endpoint and mobile next-action UI.
-5. Add CI job to run backend/mobile typecheck automatically.
+1. Run CI and patch any backend/mobile typecheck failures.
+2. Create/apply notification migration in real environments.
+3. Add notification creation hooks for proposals, deals, payments, reviews, and disputes.
+4. Add full admin dispute/risk/fraud/review mobile screens using `adminService`.
+5. Add CI database migration validation.
