@@ -9,9 +9,19 @@ import { dealService } from '../../src/services/dealService';
 import { offerService } from '../../src/services/offerService';
 import { requestService } from '../../src/services/requestService';
 
+interface AdminOverviewStats {
+  totalUsers: number;
+  totalDeals: number;
+  activeDeals: number;
+  activeOffers: number;
+  openRequests: number;
+  pendingDisputes: number;
+  pendingReviews: number;
+}
+
 export default function AdminOverviewScreen() {
   const { isOperator } = useAuth();
-  const [stats, setStats] = useState<any | null>(null);
+  const [stats, setStats] = useState<AdminOverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,29 +29,29 @@ export default function AdminOverviewScreen() {
   const loadOverview = async () => {
     try {
       setError(null);
-      
-      // Fetch real data from existing services
+
       const [deals, offers, requests] = await Promise.all([
         dealService.getDeals(),
         offerService.getOffers({}),
         requestService.getRequests({}),
       ]);
-      
-      // Calculate stats
+
       const totalDeals = deals.length;
-      const activeDeals = deals.filter((d: any) => d.status === 'in_progress').length;
-      const totalOffers = offers.length;
-      const totalRequests = requests.length;
-      
-      // Mock additional stats (would need user service for real count)
-      setStats({ 
-        totalUsers: 1247, // Would need userService
+      const activeDeals = deals.filter((deal: any) =>
+        ['created', 'funded', 'submitted', 'disputed', 'under_review'].includes(deal.status),
+      ).length;
+      const activeOffers = offers.filter((offer: any) => offer.status !== 'archived').length;
+      const openRequests = requests.filter((request: any) => request.status === 'open').length;
+      const pendingDisputes = deals.filter((deal: any) => deal.status === 'disputed').length;
+
+      setStats({
+        totalUsers: 0,
         totalDeals,
         activeDeals,
-        pendingDisputes: 12, // Would need dispute service
-        activeOffers: totalOffers,
-        openRequests: totalRequests,
-        pendingReviews: 23, // Would need reviewService
+        activeOffers,
+        openRequests,
+        pendingDisputes,
+        pendingReviews: 0,
       });
     } catch (_error) {
       setError('Failed to load admin overview');
@@ -54,6 +64,11 @@ export default function AdminOverviewScreen() {
   useEffect(() => {
     loadOverview();
   }, []);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadOverview();
+  };
 
   if (!isOperator) {
     return <AccessDeniedState message="Only operator and admin roles can access admin overview." />;
@@ -76,8 +91,14 @@ export default function AdminOverviewScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadOverview(); }} />}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
       <Text style={styles.title}>Admin Dashboard</Text>
+      <Text style={styles.note}>Live marketplace counts. User/review totals require admin API integration.</Text>
+
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>{stats.totalUsers}</Text>
@@ -110,17 +131,6 @@ export default function AdminOverviewScreen() {
       </View>
     </ScrollView>
   );
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.activeDisputes}</Text>
-          <Text style={styles.statLabel}>Active Disputes</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.pendingReviews}</Text>
-          <Text style={styles.statLabel}>Pending Reviews</Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
 }
 
 const styles = StyleSheet.create({
@@ -128,7 +138,8 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   loading: { ...typography.body, color: colors.textSecondary },
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
+  title: { ...typography.h1, color: colors.text, marginBottom: spacing.sm },
+  note: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.lg },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   statCard: { width: '48%', backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.md },
   statValue: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
