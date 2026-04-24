@@ -1,6 +1,8 @@
-# SkillValue AI
+# WorkAI
 
-Backend + mobile workspace for SkillValue AI Official Product 1.0.
+Backend + mobile workspace for WorkAI Official Product 1.0.
+
+WorkAI is an AI-native social marketplace operating system for turning skills, knowledge, time, services, trust, and problem-solving ability into tradable value. The backend and mobile workspace are designed around offers, requests, proposals, deals, AI copilot workflows, trust/risk/fraud systems, and operator/admin workflows.
 
 ## Status
 
