@@ -66,7 +66,7 @@ function generateMockNotifications(count: number = 10): Notification[] {
     payment_received: ['Payment received', 'Funds deposited'],
     review_received: ['New review', 'You received a 5-star review'],
     trust_update: ['Trust score updated', 'Verification completed'],
-    system: ['Welcome to SkillValue', 'Account verified', 'New features available'],
+    system: ['Welcome to WorkAI', 'Account verified', 'New features available'],
   };
   
   const messages: Record<NotificationType, string[]> = {
@@ -119,8 +119,8 @@ export const notificationService = {
       if (filters?.offset) params.append('offset', filters.offset.toString());
       
       const query = params.toString();
-      const response = await apiClient.get(`/notifications${query ? `?${query}` : ''}`);
-      return response.data?.data || { items: [], total: 0, unreadCount: 0 };
+      const response = await apiClient.get<any>(`/notifications${query ? `?${query}` : ''}`);
+      return response.data || { items: [], total: 0, unreadCount: 0 };
     } catch (error) {
       if (USE_MOCK_FALLBACK) {
         console.warn('notificationService.getNotifications failed, using mock fallback');
@@ -173,8 +173,8 @@ export const notificationService = {
 
   async getUnreadCount(): Promise<number> {
     try {
-      const response = await apiClient.get('/notifications/unread-count');
-      return response.data?.data?.count || 0;
+      const response = await apiClient.get<any>('/notifications/unread-count');
+      return response.data?.count || 0;
     } catch (error) {
       if (USE_MOCK_FALLBACK) {
         console.warn('notificationService.getUnreadCount failed, using mock fallback');
@@ -186,8 +186,8 @@ export const notificationService = {
 
   async updatePreferences(preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
     try {
-      const response = await apiClient.patch('/notifications/preferences', preferences);
-      return response.data?.data;
+      const response = await apiClient.patch<any>('/notifications/preferences', preferences);
+      return response.data;
     } catch (error) {
       if (USE_MOCK_FALLBACK) {
         console.warn('notificationService.updatePreferences failed, using mock fallback');
@@ -212,8 +212,8 @@ export const notificationService = {
 
   async getPreferences(): Promise<NotificationPreferences> {
     try {
-      const response = await apiClient.get('/notifications/preferences');
-      return response.data?.data;
+      const response = await apiClient.get<any>('/notifications/preferences');
+      return response.data;
     } catch (error) {
       if (USE_MOCK_FALLBACK) {
         console.warn('notificationService.getPreferences failed, using mock fallback');
