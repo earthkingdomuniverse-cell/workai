@@ -19,9 +19,12 @@ const suggestedGoals = [
 export default function GoalsSetupScreen() {
   const router = useRouter();
   const onboarding = useOnboardingStore();
-  const [goals, setGoals] = useState<string[]>(onboarding.goals);
+  const initialGoals = onboarding.goals.filter(
+    (goal) => !['provider', 'requester', 'both'].includes(goal),
+  );
+  const [goals, setGoals] = useState<string[]>(initialGoals);
   const [loading, setLoading] = useState(false);
-  const { setOnboardingCompleted, updateUser } = useAuthStore();
+  const { setOnboardingCompleted } = useAuthStore();
 
   const toggleGoal = (goal: string) => {
     if (goals.includes(goal)) {
@@ -31,16 +34,20 @@ export default function GoalsSetupScreen() {
     }
   };
 
+  const completeOnboarding = async () => {
+    const selectedIntentGoals = onboarding.goals.filter((goal) =>
+      ['provider', 'requester', 'both'].includes(goal),
+    );
+    onboarding.setGoals([...selectedIntentGoals, ...goals]);
+    await setOnboardingCompleted(true);
+    onboarding.reset();
+    router.replace('/(tabs)/home');
+  };
+
   const handleComplete = async () => {
     setLoading(true);
     try {
-      onboarding.setGoals(goals);
-      if (onboarding.role) {
-        updateUser({ role: onboarding.role });
-      }
-      await setOnboardingCompleted(true);
-      onboarding.reset();
-      router.replace('/(tabs)/home');
+      await completeOnboarding();
     } catch (error) {
       console.error('Error completing onboarding:', error);
     } finally {
@@ -49,13 +56,14 @@ export default function GoalsSetupScreen() {
   };
 
   const handleSkip = async () => {
-    onboarding.setGoals(goals);
-    if (onboarding.role) {
-      updateUser({ role: onboarding.role });
+    setLoading(true);
+    try {
+      await completeOnboarding();
+    } catch (error) {
+      console.error('Error skipping onboarding goals:', error);
+    } finally {
+      setLoading(false);
     }
-    await setOnboardingCompleted(true);
-    onboarding.reset();
-    router.replace('/(tabs)/home');
   };
 
   return (
