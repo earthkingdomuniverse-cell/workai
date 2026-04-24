@@ -1,6 +1,6 @@
 import { AiMatchInput, AiMatchOutput, AiRecommendation } from '../types/ai';
 import { SupportTicketInput, SupportTicketOutput } from '../types/support';
-import { mockOffers } from '../mocks/offers';
+import { prisma } from '../lib/prisma';
 import { aiSupportService } from './aiSupportService';
 
 export interface PriceSuggestionInput {
@@ -27,12 +27,20 @@ class AiServiceImpl implements AiService {
   async match(input: AiMatchInput): Promise<AiMatchOutput> {
     const normalizedSkills = input.skills.map((skill) => skill.toLowerCase());
 
-    const recommendations = mockOffers
-      .map<AiRecommendation>((offer) => {
-        const matchedSkills = (offer.skills || []).filter((skill) =>
-          normalizedSkills.some((candidate) => skill.toLowerCase().includes(candidate)),
-        );
+    const offers = await prisma.offer.findMany({
+      where: { status: 'active' },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
 
+    const recommendations = offers
+      .map<AiRecommendation>((offer) => {
+        const searchable = [offer.title, offer.description, offer.category]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        const matchedSkills = normalizedSkills.filter((skill) => searchable.includes(skill));
         const titleMatch = offer.title.toLowerCase().includes(input.title.toLowerCase());
         const budgetMidpoint = input.budget
           ? ((input.budget.min || 0) + (input.budget.max || 0)) / 2
@@ -42,6 +50,7 @@ class AiServiceImpl implements AiService {
         let score = matchedSkills.length * 20;
         if (titleMatch) score += 25;
         if (budgetMatch) score += 15;
+        if (offer.category && input.title.toLowerCase().includes(offer.category.toLowerCase())) score += 10;
 
         return {
           id: `rec_${offer.id}`,
@@ -51,7 +60,7 @@ class AiServiceImpl implements AiService {
           score: Math.min(100, score),
           reason:
             matchedSkills.length > 0
-              ? `Matched skills: ${matchedSkills.join(', ')}`
+              ? `Matched terms: ${matchedSkills.join(', ')}`
               : 'Relevant marketplace result',
           matchFactors: [
             {
@@ -60,7 +69,7 @@ class AiServiceImpl implements AiService {
               score: Math.min(100, matchedSkills.length * 25),
               reason:
                 matchedSkills.length > 0
-                  ? `Matched ${matchedSkills.length} skill(s)`
+                  ? `Matched ${matchedSkills.length} term(s)`
                   : 'No strong skill overlap',
             },
             {
@@ -80,10 +89,9 @@ class AiServiceImpl implements AiService {
           ],
           entityId: offer.id,
           entity: offer,
-          tags: offer.skills || [],
+          tags: offer.category ? [offer.category] : [],
           price: offer.price,
           currency: offer.currency,
-          deliveryTime: offer.deliveryTime,
         };
       })
       .filter((item) => item.score > 20)
