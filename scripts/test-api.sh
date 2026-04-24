@@ -3,7 +3,7 @@
 
 BASE_URL="http://localhost:3000/api/v1"
 
-echo "🧪 SkillValue AI - Real User Testing Tool"
+echo "🧪 WorkAI - Real User Testing Tool"
 echo "========================================"
 
 # Colors
