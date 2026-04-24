@@ -1,9 +1,9 @@
-# SkillValue AI - Development Commands
+# WorkAI - Development Commands
 
 .PHONY: help install dev backend mobile test lint format clean
 
 help:
-	@echo "SkillValue AI - Available Commands:"
+	@echo "WorkAI - Available Commands:"
 	@echo "===================================="
 	@echo "make install    - Install dependencies"
 	@echo "make dev        - Start development"
