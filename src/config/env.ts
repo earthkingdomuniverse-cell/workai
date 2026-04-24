@@ -35,7 +35,7 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW: z.string().default('60000'),
 
   // App
-  APP_NAME: z.string().default('SkillValue AI Backend'),
+  APP_NAME: z.string().default('WorkAI Backend'),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -60,13 +60,13 @@ function loadEnv(): Env {
     ENABLE_SWAGGER: process.env.ENABLE_SWAGGER || 'true',
     RATE_LIMIT_MAX: process.env.RATE_LIMIT_MAX || '100',
     RATE_LIMIT_WINDOW: process.env.RATE_LIMIT_WINDOW || '60000',
-    APP_NAME: process.env.APP_NAME || 'SkillValue AI Backend',
+    APP_NAME: process.env.APP_NAME || 'WorkAI Backend',
   };
 
   const parsed = envSchema.safeParse(envVars);
 
   if (!parsed.success) {
-    console.error('❌ Invalid environment variables:', parsed.error.flatten().fieldErrors);
+    console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
     process.exit(1);
   }
 
