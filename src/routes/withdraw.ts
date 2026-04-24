@@ -4,14 +4,17 @@ import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { walletService } from '../services/walletService';
 
+async function requireWithdrawUser(request: any, reply: any) {
+  const user = await authenticate(request, reply);
+  if (!user || user.userId === 'guest_user') {
+    throw new AppError('Authentication required', { code: 'AUTH_ERROR', statusCode: 401 });
+  }
+  return user;
+}
+
 const withdraw: FastifyPluginAsync = async (fastify) => {
-
   fastify.post('/withdraw', async (request, reply) => {
-    const user = await authenticate(request, reply);
-    if (!user || user.userId === 'guest_user') {
-      throw new AppError('Authentication required', { code: 'AUTH_ERROR', statusCode: 401 });
-    }
-
+    const user = await requireWithdrawUser(request, reply);
     const body = request.body as any;
     const amount = Number(body.amount);
 
@@ -30,8 +33,8 @@ const withdraw: FastifyPluginAsync = async (fastify) => {
         where: { userId: user.userId },
         data: {
           available: wallet.available - amount,
-          lifetimeOut: wallet.lifetimeOut + amount
-        }
+          lifetimeOut: wallet.lifetimeOut + amount,
+        },
       });
 
       await tx.walletLedgerEntry.create({
@@ -47,8 +50,8 @@ const withdraw: FastifyPluginAsync = async (fastify) => {
           heldBefore: wallet.held,
           heldAfter: updatedWallet.held,
           idempotencyKey: `withdraw:${user.userId}:${Date.now()}`,
-          description: 'User withdrawal request'
-        }
+          description: 'User withdrawal request',
+        },
       });
 
       return tx.transaction.create({
@@ -59,27 +62,27 @@ const withdraw: FastifyPluginAsync = async (fastify) => {
           amount,
           currency: wallet.currency,
           provider: body.method || 'manual',
-          referenceNumber: `WD-${Date.now()}`
-        }
+          referenceNumber: `WD-${Date.now()}`,
+        },
       });
     });
 
     return {
       status: 'pending',
       message: 'Withdrawal request created',
-      transactionId: tx.id
+      transactionId: tx.id,
     };
   });
 
   fastify.get('/withdraw', async (request, reply) => {
-    const user = await authenticate(request, reply);
+    const user = await requireWithdrawUser(request, reply);
 
     const items = await prisma.transaction.findMany({
       where: {
         userId: user.userId,
-        type: 'withdrawal'
+        type: 'withdrawal',
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
     return { items };
