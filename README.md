@@ -4,6 +4,18 @@ Backend + mobile workspace for WorkAI Official Product 1.0.
 
 WorkAI is an AI-native social marketplace operating system for turning skills, knowledge, time, services, trust, and problem-solving ability into tradable value. The backend and mobile workspace are designed around offers, requests, proposals, deals, AI copilot workflows, trust/risk/fraud systems, and operator/admin workflows.
 
+## Documentation
+
+Most project documents are organized under [`docs/`](docs/README.md):
+
+- Architecture: [`docs/architecture/`](docs/architecture/)
+- Product docs: [`docs/product/`](docs/product/)
+- Launch docs: [`docs/launch/`](docs/launch/)
+- Marketing docs: [`docs/marketing/`](docs/marketing/)
+- Monetization docs: [`docs/monetization/`](docs/monetization/)
+- QA docs: [`docs/qa/`](docs/qa/)
+- Reports: [`docs/reports/`](docs/reports/)
+
 ## Status
 
 - Backend TypeScript build passes: `npm run typecheck` and `npm run build`
