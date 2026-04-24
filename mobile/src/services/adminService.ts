@@ -32,19 +32,26 @@ function unwrap<T>(response: ApiResponse<T> | T): T {
   return response as T;
 }
 
+function numberFrom(...values: any[]): number {
+  const value = values.find((item) => item !== undefined && item !== null && item !== '');
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function normalizeOverview(raw: any): AdminOverview {
-  const source = raw?.overview || raw?.stats || raw || {};
+  const unwrapped = unwrap(raw);
+  const stats = unwrapped?.stats || unwrapped?.overview?.stats || unwrapped?.overview || unwrapped || {};
 
   return {
-    totalUsers: Number(source.totalUsers ?? source.users ?? source.userCount ?? 0),
-    totalDeals: Number(source.totalDeals ?? source.deals ?? source.dealCount ?? 0),
-    activeDeals: Number(source.activeDeals ?? source.openDeals ?? 0),
-    activeOffers: Number(source.activeOffers ?? source.offers ?? source.offerCount ?? 0),
-    openRequests: Number(source.openRequests ?? source.requests ?? source.requestCount ?? 0),
-    pendingDisputes: Number(source.pendingDisputes ?? source.disputes ?? 0),
-    pendingReviews: Number(source.pendingReviews ?? source.reviews ?? 0),
-    riskSignals: Number(source.riskSignals ?? source.risk ?? 0),
-    fraudSignals: Number(source.fraudSignals ?? source.fraud ?? 0),
+    totalUsers: numberFrom(stats.totalUsers, stats.users, stats.userCount),
+    totalDeals: numberFrom(stats.totalDeals, stats.deals, stats.dealCount),
+    activeDeals: numberFrom(stats.activeDeals, stats.openDeals, stats.dealsActive),
+    activeOffers: numberFrom(stats.activeOffers, stats.totalOffers, stats.offers, stats.offerCount),
+    openRequests: numberFrom(stats.openRequests, stats.totalRequests, stats.requests, stats.requestCount),
+    pendingDisputes: numberFrom(stats.pendingDisputes, stats.activeDisputes, stats.disputes),
+    pendingReviews: numberFrom(stats.pendingReviews, stats.reviews),
+    riskSignals: numberFrom(stats.riskSignals, stats.risk),
+    fraudSignals: numberFrom(stats.fraudSignals, stats.fraud),
   };
 }
 
@@ -57,7 +64,7 @@ function normalizeList<T>(raw: any): AdminListResponse<T> {
 export const adminService = {
   async getOverview(): Promise<AdminOverview> {
     const response = await apiClient.get<ApiResponse<any>>('/admin/overview');
-    return normalizeOverview(unwrap(response));
+    return normalizeOverview(response);
   },
 
   async getDisputes(): Promise<AdminListResponse<any>> {
