@@ -1,7 +1,11 @@
+import { ENABLE_MOCK_MODE } from '../constants/config';
 import apiClient from './apiClient';
 import { generateMockRecommendations, generateMockPriceSuggestion, generateMockSupportResponse } from './mockData';
 
-const USE_MOCK_FALLBACK = true;
+interface ApiResponse<T> {
+  data: T;
+  meta?: Record<string, any>;
+}
 
 export interface AiMatchInput {
   title: string;
@@ -43,6 +47,13 @@ export interface PriceSuggestionInput {
   providerLevel: 'beginner' | 'intermediate' | 'expert';
 }
 
+export interface PriceSuggestionOutput {
+  suggested_price: number;
+  floor_price: number;
+  ceiling_price: number;
+  reasoning: string[];
+}
+
 export interface SupportInput {
   message: string;
 }
@@ -55,13 +66,17 @@ export interface SupportOutput {
   escalationRequired: boolean;
 }
 
+function shouldUseMockFallback(): boolean {
+  return ENABLE_MOCK_MODE;
+}
+
 export const aiService = {
   async match(input: AiMatchInput): Promise<AiRecommendation[]> {
     try {
-      const response = await apiClient.post('/ai/match', input);
-      return response.data?.data?.recommendations || [];
+      const response = await apiClient.post<ApiResponse<{ recommendations: AiRecommendation[] }>>('/ai/match', input);
+      return response.data.recommendations || [];
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('aiService.match failed, using mock fallback');
         return generateMockRecommendations(5);
       }
@@ -69,17 +84,12 @@ export const aiService = {
     }
   },
 
-  async suggestPrice(input: PriceSuggestionInput): Promise<{
-    suggested_price: number;
-    floor_price: number;
-    ceiling_price: number;
-    reasoning: string[];
-  }> {
+  async suggestPrice(input: PriceSuggestionInput): Promise<PriceSuggestionOutput> {
     try {
-      const response = await apiClient.post('/ai/price', input);
-      return response.data?.data;
+      const response = await apiClient.post<ApiResponse<PriceSuggestionOutput>>('/ai/price', input);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('aiService.suggestPrice failed, using mock fallback');
         return generateMockPriceSuggestion();
       }
@@ -89,10 +99,10 @@ export const aiService = {
 
   async support(input: SupportInput): Promise<SupportOutput> {
     try {
-      const response = await apiClient.post('/ai/support', input);
-      return response.data?.data;
+      const response = await apiClient.post<ApiResponse<SupportOutput>>('/ai/support', input);
+      return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('aiService.support failed, using mock fallback');
         return generateMockSupportResponse(input.message);
       }
