@@ -38,7 +38,7 @@ export const registerPlugins: FastifyPluginAsync = async (fastify) => {
       openapi: {
         info: {
           title: config.app.name,
-          description: 'SkillValue AI Backend API',
+          description: 'WorkAI Backend API',
           version: '1.0.0',
         },
         servers: [
