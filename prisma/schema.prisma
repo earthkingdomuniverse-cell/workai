@@ -8,37 +8,72 @@ datasource db {
 }
 
 model User {
-  id                  String    @id @default(uuid())
-  email               String    @unique
+  id                  String        @id @default(uuid())
+  email               String        @unique
   passwordHash        String
-  role                String    @default("member")
-  onboardingCompleted Boolean   @default(false)
-  trustScore          Int       @default(100)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  role                String        @default("member")
+  onboardingCompleted Boolean       @default(false)
+  trustScore          Int           @default(100)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   offers              Offer[]
-  disputesReported    Dispute[] @relation("ReporterDisputes")
-  disputesReceived    Dispute[] @relation("ReportedUserDisputes")
+  requests            WorkRequest[] @relation("ClientRequests")
+  providerProposals   Proposal[]    @relation("ProviderProposals")
+  clientProposals     Proposal[]    @relation("ClientProposals")
+  providerDeals       Deal[]        @relation("ProviderDeals")
+  clientDeals         Deal[]        @relation("ClientDeals")
+  transactions        Transaction[]
+  reviewsWritten      Review[]      @relation("ReviewerReviews")
+  reviewsReceived     Review[]      @relation("SubjectReviews")
+  disputesReported    Dispute[]     @relation("ReporterDisputes")
+  disputesReceived    Dispute[]     @relation("ReportedUserDisputes")
 
   @@index([role])
   @@index([trustScore])
 }
 
+model WorkRequest {
+  id           String     @id @default(uuid())
+  requesterId  String
+  title        String
+  description  String
+  category     String?
+  skills       String[]
+  budgetMin    Float?
+  budgetMax    Float?
+  currency     String     @default("USD")
+  urgency      String?
+  status       String     @default("open")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  requester    User       @relation("ClientRequests", fields: [requesterId], references: [id])
+  proposals    Proposal[]
+  deals        Deal[]
+
+  @@index([requesterId])
+  @@index([category])
+  @@index([status])
+  @@index([createdAt])
+}
+
 model Offer {
-  id           String   @id @default(uuid())
+  id           String     @id @default(uuid())
   providerId   String
   title        String
   description  String
   category     String
   price        Float
-  currency     String   @default("USD")
-  pricingType  String   @default("fixed")
-  status       String   @default("active")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  currency     String     @default("USD")
+  pricingType  String     @default("fixed")
+  status       String     @default("active")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  provider     User     @relation(fields: [providerId], references: [id])
+  provider     User       @relation(fields: [providerId], references: [id])
+  proposals    Proposal[]
+  deals        Deal[]
 
   @@index([providerId])
   @@index([category])
@@ -46,18 +81,111 @@ model Offer {
   @@index([createdAt])
 }
 
-model Deal {
-  id        String    @id @default(uuid())
-  offerId   String
-  clientId  String
-  status    String    @default("pending")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+model Proposal {
+  id                    String       @id @default(uuid())
+  requestId             String?
+  offerId               String?
+  providerId            String
+  clientId              String
+  title                 String
+  message               String
+  proposedAmount        Float
+  currency              String       @default("USD")
+  estimatedDeliveryDays Int
+  revisions             Int          @default(1)
+  status                String       @default("pending")
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
-  disputes  Dispute[]
+  request               WorkRequest? @relation(fields: [requestId], references: [id])
+  offer                 Offer?       @relation(fields: [offerId], references: [id])
+  provider              User         @relation("ProviderProposals", fields: [providerId], references: [id])
+  client                User         @relation("ClientProposals", fields: [clientId], references: [id])
+  deals                 Deal[]
+
+  @@index([requestId])
+  @@index([offerId])
+  @@index([providerId])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Deal {
+  id             String        @id @default(uuid())
+  offerId        String?
+  requestId      String?
+  proposalId     String?
+  providerId     String
+  clientId       String
+  status         String        @default("created")
+  title          String
+  description    String
+  amount         Float
+  currency       String        @default("USD")
+  fundedAmount   Float         @default(0)
+  releasedAmount Float         @default(0)
+  serviceFee     Float         @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  offer          Offer?        @relation(fields: [offerId], references: [id])
+  request        WorkRequest?  @relation(fields: [requestId], references: [id])
+  proposal       Proposal?     @relation(fields: [proposalId], references: [id])
+  provider       User          @relation("ProviderDeals", fields: [providerId], references: [id])
+  client         User          @relation("ClientDeals", fields: [clientId], references: [id])
+  milestones     Milestone[]
+  transactions   Transaction[]
+  disputes       Dispute[]
+  reviews        Review[]
 
   @@index([offerId])
+  @@index([requestId])
+  @@index([proposalId])
+  @@index([providerId])
   @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  dealId      String
+  title       String
+  description String?
+  amount      Float
+  status      String    @default("pending")
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  deal        Deal      @relation(fields: [dealId], references: [id])
+
+  @@index([dealId])
+  @@index([status])
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  dealId          String
+  userId          String
+  type            String
+  status          String   @default("pending")
+  amount          Float
+  currency        String   @default("USD")
+  provider        String?
+  providerRef     String?
+  referenceNumber String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  deal            Deal     @relation(fields: [dealId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([dealId])
+  @@index([userId])
+  @@index([type])
   @@index([status])
   @@index([createdAt])
 }
@@ -96,6 +224,10 @@ model Review {
   comment    String
   status     String   @default("published")
   createdAt  DateTime @default(now())
+
+  reviewer   User     @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  subject    User     @relation("SubjectReviews", fields: [subjectId], references: [id])
+  deal       Deal     @relation(fields: [dealId], references: [id])
 
   @@index([reviewerId])
   @@index([subjectId])
