@@ -26,6 +26,7 @@ Recent hardening included:
 - Backend admin routes now use normalized `{ data, meta }` response shape.
 - Backend notification routes have been added and registered.
 - Notification persistence has been added through Prisma `Notification` and `NotificationPreference` models.
+- Notification creation hooks have been added for proposal, deal, payment release, dispute, and review events.
 - Backend AI now includes `/ai/next-action`.
 - Mobile Home and AI Next Action screens now call `aiService.nextAction()`.
 - GitHub Actions CI has been added for backend and mobile static checks.
@@ -70,6 +71,7 @@ Potential risk areas:
 - AuthContext role checks in `payments.ts`.
 - Deal filter `OR` query in `deals.ts`.
 - Notification Prisma models and route calls in `notifications.ts`.
+- Notification hook imports in proposal/deal/review flows.
 - Admin response normalization.
 - AI next-action response shape.
 
@@ -312,6 +314,7 @@ Expected:
 - backend resolves request from Prisma, not mocks.
 - `clientId` should be request requester.
 - `providerId` should be provider token user id.
+- client receives `proposal_received` notification.
 
 Store:
 
@@ -319,7 +322,18 @@ Store:
 export PROPOSAL_ID=<proposal_id>
 ```
 
-## 2. Client accepts proposal
+## 2. Verify proposal received notification for client
+
+```bash
+curl "http://localhost:3000/api/v1/notifications?type=proposal_received" \
+  -H "Authorization: Bearer $CLIENT_TOKEN"
+```
+
+Expected:
+
+- at least one notification references `$PROPOSAL_ID` in `data.proposalId`.
+
+## 3. Client accepts proposal
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/proposals/$PROPOSAL_ID/accept \
@@ -329,8 +343,20 @@ curl -X POST http://localhost:3000/api/v1/proposals/$PROPOSAL_ID/accept \
 Expected:
 
 - proposal accepted.
+- provider receives `proposal_accepted` notification.
 - if product logic creates deal on accept, deal reference should exist.
 - if not, deal must be created separately.
+
+## 4. Verify proposal accepted notification for provider
+
+```bash
+curl "http://localhost:3000/api/v1/notifications?type=proposal_accepted" \
+  -H "Authorization: Bearer $PROVIDER_TOKEN"
+```
+
+Expected:
+
+- at least one notification references `$PROPOSAL_ID` in `data.proposalId`.
 
 ---
 
@@ -349,6 +375,7 @@ Expected:
 
 - deal created.
 - response contains `id`.
+- provider receives `deal_update` notification for new deal.
 
 Store:
 
@@ -396,6 +423,17 @@ Expected:
 
 - participant receives deal.
 - unauthenticated request receives 401.
+
+## 4. Verify deal notification for provider
+
+```bash
+curl "http://localhost:3000/api/v1/notifications?type=deal_update" \
+  -H "Authorization: Bearer $PROVIDER_TOKEN"
+```
+
+Expected:
+
+- at least one notification references `$DEAL_ID` in `data.dealId`.
 
 ---
 
@@ -457,6 +495,29 @@ Expected:
 
 - returns receipt views derived from transactions.
 
+## 5. Fund/submit/release notification events
+
+After funding/submitting/releasing a deal through their respective endpoints, verify:
+
+```bash
+curl "http://localhost:3000/api/v1/notifications?type=deal_update" \
+  -H "Authorization: Bearer $PROVIDER_TOKEN"
+```
+
+Expected:
+
+- provider receives `deal_update` notifications for funded/released events.
+- client receives `deal_update` notification for submitted work.
+
+```bash
+curl "http://localhost:3000/api/v1/notifications?type=payment_received" \
+  -H "Authorization: Bearer $PROVIDER_TOKEN"
+```
+
+Expected:
+
+- provider receives `payment_received` notification after release.
+
 ---
 
 # Phase 9 - Reviews / trust smoke test
@@ -474,7 +535,25 @@ Expected:
 
 - fails unless deal status is `released`.
 
-## 2. Trust me
+## 2. Review after release should create notification
+
+After deal release succeeds, submit the review again.
+
+Expected:
+
+- review is created.
+- reviewed user receives `review_received` notification.
+
+```bash
+curl "http://localhost:3000/api/v1/notifications?type=review_received" \
+  -H "Authorization: Bearer $PROVIDER_TOKEN"
+```
+
+Expected:
+
+- at least one notification references `$DEAL_ID` in `data.dealId`.
+
+## 3. Trust me
 
 ```bash
 curl http://localhost:3000/api/v1/trust/me \
@@ -486,7 +565,7 @@ Expected:
 - returns Prisma-backed trust profile.
 - no longer returns first mock trust profile.
 
-## 3. Trust user
+## 4. Trust user
 
 ```bash
 curl http://localhost:3000/api/v1/trust/<provider_user_id>
@@ -522,6 +601,7 @@ Expected:
 - returns `{ data: { items, total, unreadCount } }`.
 - if user has no notifications yet, backend seeds default persistent notifications.
 - rows are stored in Prisma `Notification`.
+- event notifications from proposal/deal/review hooks are visible to their recipients only.
 
 ## 3. Unread count
 
@@ -686,6 +766,7 @@ Expected:
 - Home renders AI next action card.
 - AI Next Action screen renders backend-generated actions.
 - Notification inbox does not 404 after backend migration.
+- Proposal/deal/review event notifications show in notification UI for the correct user.
 - Tabs render.
 - Member cannot access admin.
 - Operator/admin can access admin overview.
@@ -707,6 +788,7 @@ Expected:
 - Transactions/receipts return Prisma-backed records.
 - Trust `/me` requires auth and returns real user profile.
 - Notifications require auth and return Prisma-backed rows.
+- Proposal/deal/review events create notifications for the correct recipient.
 - AI next-action returns `{ actions, summary }`.
 - Mobile TypeScript compiles.
 - Expo starts without syntax/import errors.
@@ -724,6 +806,6 @@ Expected:
 
 1. Run CI and patch any backend/mobile typecheck failures.
 2. Create/apply notification migration in real environments.
-3. Add notification creation hooks for proposals, deals, payments, reviews, and disputes.
-4. Add full admin dispute/risk/fraud/review mobile screens using `adminService`.
-5. Add CI database migration validation.
+3. Add full admin dispute/risk/fraud/review mobile screens using `adminService`.
+4. Add CI database migration validation.
+5. Add push/email delivery adapters behind the persisted notification system.
