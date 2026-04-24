@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAccessToken } from '../modules/auth/token';
 import type { Role } from '../types/common';
+import { AppError } from './errors';
 
 export interface AuthContext {
   userId: string;
@@ -45,12 +46,11 @@ export async function authorize(
 ): Promise<void> {
   const user =
     ((request as any).user as AuthContext | undefined) || (await authenticate(request, reply));
+
   if (!roles.includes(user.role)) {
-    reply.status(403).send({
-      error: {
-        code: 'ACCESS_DENIED',
-        message: 'Member role is not allowed to access this resource',
-      },
+    throw new AppError('Member role is not allowed to access this resource', {
+      code: 'ACCESS_DENIED',
+      statusCode: 403,
     });
   }
 }
