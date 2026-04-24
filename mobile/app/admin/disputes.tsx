@@ -1,54 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 import { useAuth } from '../../src/hooks/useAuth';
 import AccessDeniedState from '../../src/components/AccessDeniedState';
-import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
-import { dealService } from '../../src/services/dealService';
+import { ErrorState } from '../../components/ErrorState';
+import { adminService } from '../../src/services/adminService';
 
 export default function AdminDisputesScreen() {
   const { isOperator } = useAuth();
   const [items, setItems] = useState<any[]>([]);
+  const [resolution, setResolution] = useState('Resolved by operator review.');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const loadDisputes = async () => {
     try {
       setError(null);
-      // Fetch from deals service and filter for disputes
-      const deals = await dealService.getDeals();
-
-      // Mock dispute data combined with deals (in real app, would have dispute endpoint)
-      const mockDisputes = [
-        {
-          id: 'dispute_1',
-          dealId: 'deal_123',
-          reason: 'Quality dispute',
-          description: 'Work quality concern',
-          status: 'open',
-          createdAt: '2026-04-20T10:00:00Z',
-        },
-        {
-          id: 'dispute_2',
-          dealId: 'deal_456',
-          reason: 'Payment dispute',
-          description: 'Payment terms disagreement',
-          status: 'investigating',
-          createdAt: '2026-04-18T10:00:00Z',
-        },
-        {
-          id: 'dispute_3',
-          dealId: 'deal_789',
-          reason: 'Timeline dispute',
-          description: 'Delivery delay issue',
-          status: 'resolved',
-          createdAt: '2026-04-15T10:00:00Z',
-        },
-      ];
-
-      setItems(mockDisputes);
+      const response = await adminService.getDisputes();
+      setItems(response.items || []);
     } catch (_error) {
       setError('Failed to load disputes');
     } finally {
@@ -61,9 +33,27 @@ export default function AdminDisputesScreen() {
     loadDisputes();
   }, []);
 
+  const handleResolve = async (id: string) => {
+    if (!resolution.trim()) {
+      Alert.alert('Resolution required', 'Enter a resolution note before resolving a dispute.');
+      return;
+    }
+
+    try {
+      setProcessingId(id);
+      await adminService.resolveDispute(id, resolution.trim());
+      await loadDisputes();
+    } catch (_error) {
+      Alert.alert('Resolve failed', 'Could not resolve this dispute.');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   if (!isOperator) {
     return <AccessDeniedState message="Only operator and admin roles can access disputes." />;
   }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -71,17 +61,9 @@ export default function AdminDisputesScreen() {
       </View>
     );
   }
+
   if (error && items.length === 0) {
     return <ErrorState message={error} onRetry={loadDisputes} />;
-  }
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="No disputes"
-        description="There are currently no disputes to review."
-        icon="⚖️"
-      />
-    );
   }
 
   return (
@@ -98,17 +80,47 @@ export default function AdminDisputesScreen() {
         />
       }
     >
-      <Text style={styles.title}>Active Disputes</Text>
-      {items.map((item) => (
-        <View key={item.id} style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{item.id}</Text>
-            <Text style={styles.status}>{item.status}</Text>
+      <Text style={styles.title}>Disputes</Text>
+      <Text style={styles.subtitle}>Review and resolve marketplace disputes.</Text>
+
+      <View style={styles.resolutionBox}>
+        <Text style={styles.label}>Default resolution note</Text>
+        <TextInput
+          style={styles.input}
+          value={resolution}
+          onChangeText={setResolution}
+          multiline
+          placeholder="Resolution note"
+          placeholderTextColor={colors.textSecondary}
+        />
+      </View>
+
+      {items.length === 0 ? (
+        <EmptyState title="No disputes" description="There are no disputes requiring review." icon="✅" />
+      ) : (
+        items.map((item) => (
+          <View key={item.id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{item.reason || 'Dispute'}</Text>
+              <Text style={styles.status}>{item.status || 'open'}</Text>
+            </View>
+            <Text style={styles.body}>{item.description || 'No description provided.'}</Text>
+            <Text style={styles.meta}>Deal: {item.dealId || 'unknown'}</Text>
+            <Text style={styles.meta}>Reporter: {item.reporterId || 'unknown'}</Text>
+            <Text style={styles.meta}>Reported: {item.reportedUserId || 'unknown'}</Text>
+
+            {item.status !== 'resolved' ? (
+              <TouchableOpacity
+                style={styles.button}
+                disabled={processingId === item.id}
+                onPress={() => handleResolve(item.id)}
+              >
+                <Text style={styles.buttonText}>{processingId === item.id ? 'Resolving...' : 'Resolve'}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
-          <Text style={styles.reason}>{item.reason}</Text>
-          <Text style={styles.description}>{item.description}</Text>
-        </View>
-      ))}
+        ))
+      )}
     </ScrollView>
   );
 }
@@ -116,23 +128,28 @@ export default function AdminDisputesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   loading: { ...typography.body, color: colors.textSecondary },
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
-  card: {
-    backgroundColor: colors.card,
+  title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
+  subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
+  resolutionBox: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg },
+  label: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm },
+  input: {
+    minHeight: 80,
+    color: colors.text,
+    backgroundColor: colors.background,
     borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    textAlignVertical: 'top',
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-  cardTitle: { ...typography.h3, color: colors.text },
-  status: { ...typography.caption, color: colors.warning, fontWeight: '600' },
-  reason: { ...typography.body, color: colors.text, fontWeight: '600', marginBottom: spacing.xs },
-  description: { ...typography.body, color: colors.textSecondary },
+  card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, marginBottom: spacing.sm },
+  cardTitle: { ...typography.h3, color: colors.text, flex: 1 },
+  status: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  body: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
+  meta: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
+  button: { backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', marginTop: spacing.md },
+  buttonText: { ...typography.body, color: colors.white, fontWeight: '700' },
 });
