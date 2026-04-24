@@ -5,23 +5,11 @@ import { useAuth } from '../../src/hooks/useAuth';
 import AccessDeniedState from '../../src/components/AccessDeniedState';
 import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
-import { dealService } from '../../src/services/dealService';
-import { offerService } from '../../src/services/offerService';
-import { requestService } from '../../src/services/requestService';
-
-interface AdminOverviewStats {
-  totalUsers: number;
-  totalDeals: number;
-  activeDeals: number;
-  activeOffers: number;
-  openRequests: number;
-  pendingDisputes: number;
-  pendingReviews: number;
-}
+import { adminService, AdminOverview } from '../../src/services/adminService';
 
 export default function AdminOverviewScreen() {
   const { isOperator } = useAuth();
-  const [stats, setStats] = useState<AdminOverviewStats | null>(null);
+  const [stats, setStats] = useState<AdminOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,30 +17,8 @@ export default function AdminOverviewScreen() {
   const loadOverview = async () => {
     try {
       setError(null);
-
-      const [deals, offers, requests] = await Promise.all([
-        dealService.getDeals(),
-        offerService.getOffers({}),
-        requestService.getRequests({}),
-      ]);
-
-      const totalDeals = deals.length;
-      const activeDeals = deals.filter((deal: any) =>
-        ['created', 'funded', 'submitted', 'disputed', 'under_review'].includes(deal.status),
-      ).length;
-      const activeOffers = offers.filter((offer: any) => offer.status !== 'archived').length;
-      const openRequests = requests.filter((request: any) => request.status === 'open').length;
-      const pendingDisputes = deals.filter((deal: any) => deal.status === 'disputed').length;
-
-      setStats({
-        totalUsers: 0,
-        totalDeals,
-        activeDeals,
-        activeOffers,
-        openRequests,
-        pendingDisputes,
-        pendingReviews: 0,
-      });
+      const overview = await adminService.getOverview();
+      setStats(overview);
     } catch (_error) {
       setError('Failed to load admin overview');
     } finally {
@@ -97,7 +63,7 @@ export default function AdminOverviewScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
     >
       <Text style={styles.title}>Admin Dashboard</Text>
-      <Text style={styles.note}>Live marketplace counts. User/review totals require admin API integration.</Text>
+      <Text style={styles.note}>Live operator overview from backend admin API.</Text>
 
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
@@ -128,6 +94,14 @@ export default function AdminOverviewScreen() {
           <Text style={styles.statValue}>{stats.pendingReviews}</Text>
           <Text style={styles.statLabel}>Pending Reviews</Text>
         </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.riskSignals ?? 0}</Text>
+          <Text style={styles.statLabel}>Risk Signals</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.fraudSignals ?? 0}</Text>
+          <Text style={styles.statLabel}>Fraud Signals</Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -141,7 +115,13 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.sm },
   note: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.lg },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  statCard: { width: '48%', backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.md },
+  statCard: {
+    width: '48%',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
   statValue: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   statLabel: { ...typography.body, color: colors.textSecondary },
 });
