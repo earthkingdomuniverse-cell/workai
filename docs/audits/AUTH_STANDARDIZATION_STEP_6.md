@@ -28,6 +28,8 @@ Authorization now uses this helper before checking roles:
 - valid token with insufficient role -> `403 ACCESS_DENIED`
 - valid operator/admin token -> request continues
 
+Automated auth contract tests have also been added and wired into CI through `npm test`.
+
 ---
 
 ## Files changed
@@ -120,6 +122,40 @@ Covered endpoints:
 - `POST /withdraw`
 - `GET /withdraw`
 
+### `src/routes/__tests__/auth-contract.test.ts`
+
+Added automated tests for the standardized auth contract.
+
+Tested cases:
+
+- missing token on `GET /api/v1/notifications` -> `401 AUTHENTICATION_ERROR`
+- missing token on `GET /api/v1/deals` -> `401 AUTHENTICATION_ERROR`
+- missing token on `GET /api/v1/withdraw` -> `401 AUTHENTICATION_ERROR`
+- missing token on `POST /api/v1/reviews` -> `401 AUTHENTICATION_ERROR`
+- member token on `GET /api/v1/admin/overview` -> `403 ACCESS_DENIED`
+
+### `.github/workflows/ci.yml`
+
+Backend CI now runs:
+
+```bash
+npm test
+```
+
+This makes the auth contract tests part of every push/PR check.
+
+### `tsconfig.json`
+
+Production TypeScript build now excludes test files:
+
+```json
+"src/**/*.test.ts",
+"src/**/*.spec.ts",
+"src/**/__tests__/**"
+```
+
+This keeps Vitest tests out of `dist` while still allowing `npm test` to execute them.
+
 ---
 
 ## Expected runtime behavior
@@ -181,22 +217,42 @@ Expected:
 
 ---
 
+## Local verification commands
+
+```bash
+npm install
+npx prisma generate
+npm run typecheck
+npm run build
+npm test
+```
+
+Expected:
+
+- typecheck passes.
+- production build passes.
+- auth contract tests pass.
+
+---
+
 ## Pass criteria
 
 Auth standardization is considered passing when:
 
 - backend typecheck passes.
 - backend build passes.
+- `npm test` passes auth contract tests.
 - missing-token requests to protected endpoints return `401`.
 - insufficient-role requests to admin endpoints return `403`.
 - protected endpoints no longer maintain duplicate local auth helpers.
 - public read endpoints remain accessible where product intent allows public reads.
+- test files are not emitted into the production `dist` build.
 
 ---
 
 ## Follow-up candidates
 
 1. Replace remaining route-local auth checks in other modules if found.
-2. Add automated auth contract tests for `401` vs `403` behavior.
+2. Add automated auth contract tests for payment and wallet authorization scope.
 3. Add OpenAPI docs or endpoint comments that classify routes as public, authenticated, or role-protected.
 4. Add test fixtures for member/operator/admin tokens.
