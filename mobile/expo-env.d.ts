@@ -1,4 +1,4 @@
-/// <reference types="expo" />
+/// <reference types="expo/types" />
 
 declare namespace NodeJS {
   interface ProcessEnv {
