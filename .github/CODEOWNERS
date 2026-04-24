@@ -1,0 +1,53 @@
+# ============================================
+# CODEOWNERS - Automatic code review assignment
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ============================================
+
+# Global fallback - all files
+* @earthkingdomuniverse-cell
+
+# ----------------------------------------
+# Backend / API
+# ----------------------------------------
+/src/ @earthkingdomuniverse-cell
+/dist/ @earthkingdomuniverse-cell
+*.ts @earthkingdomuniverse-cell
+*.js @earthkingdomuniverse-cell
+
+# ----------------------------------------
+# Database
+# ----------------------------------------
+/prisma/ @earthkingdomuniverse-cell
+/supabase/ @earthkingdomuniverse-cell
+/supabase/migrations/ @earthkingdomuniverse-cell
+*.sql @earthkingdomuniverse-cell
+
+# ----------------------------------------
+# Infrastructure / Deployment
+# ----------------------------------------
+/.github/workflows/ @earthkingdomuniverse-cell
+Dockerfile @earthkingdomuniverse-cell
+docker-compose*.yml @earthkingdomuniverse-cell
+/scripts/ @earthkingdomuniverse-cell
+
+# ----------------------------------------
+# Security
+# ----------------------------------------
+/.github/workflows/codeql.yml @earthkingdomuniverse-cell
+/.github/workflows/sonarqube.yml @earthkingdomuniverse-cell
+SECURITY.md @earthkingdomuniverse-cell
+
+# ----------------------------------------
+# Configuration
+# ----------------------------------------
+package*.json @earthkingdomuniverse-cell
+tsconfig.json @earthkingdomuniverse-cell
+.env.example @earthkingdomuniverse-cell
+*.config.* @earthkingdomuniverse-cell
+
+# ----------------------------------------
+# Documentation
+# ----------------------------------------
+/docs/ @earthkingdomuniverse-cell
+*.md @earthkingdomuniverse-cell
+README.md @earthkingdomuniverse-cell

@@ -1,32 +1,82 @@
-# Configuration for PR Labeler
+# ============================================
+# Labeler Configuration
+# Automatically labels based on file changes
+# https://github.com/actions/labeler
+# ============================================
 
+# Source code
 backend:
-  - changed-files:
-      - any-glob-to-any-file:
-          - src/**/*
-          - package.json
-          - tsconfig.json
+  - src/**
+  - any: ['*.ts', '*.js', '*.mjs']
+    all: ['!*.test.ts', '!*.test.js', '!*.spec.ts', '!*.spec.js']
 
-mobile:
-  - changed-files:
-      - any-glob-to-any-file:
-          - mobile/**/*
+# Tests
+tests:
+  - '**/*.test.ts'
+  - '**/*.test.js'
+  - '**/*.spec.ts'
+  - '**/*.spec.js'
+  - '**/__tests__/**'
+  - '**/test/**'
+  - '**/tests/**'
+  - jest.config.*
+  - vitest.config.*
 
+# Documentation
 docs:
-  - changed-files:
-      - any-glob-to-any-file:
-          - '*.md'
-          - docs/**/*
+  - '**/*.md'
+  - 'docs/**'
+  - LICENSE
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTING.md
+  - SECURITY.md
 
+# CI/CD
 ci:
-  - changed-files:
-      - any-glob-to-any-file:
-          - .github/workflows/**/*
+  - .github/workflows/**
+  - .github/dependabot.yml
+  - .github/release-drafter.yml
+  - .github/labeler.yml
+  - .github/pr-labeler.yml
 
+# Docker
+docker:
+  - Dockerfile
+  - docker-compose*.yml
+  - .dockerignore
+  - .docker/**
+
+# Database
+database:
+  - prisma/**
+  - supabase/**
+  - '**/*.sql'
+  - '**/migrations/**'
+
+# Configuration
 config:
-  - changed-files:
-      - any-glob-to-any-file:
-          - .env.example
-          - sonar-project.properties
-          - .gitignore
-          - Dockerfile
+  - package*.json
+  - tsconfig.json
+  - '*.config.*'
+  - .env.example
+  - .editorconfig
+  - .prettierrc*
+  - .eslintrc*
+
+# Scripts
+scripts:
+  - scripts/**
+  - '**/*.sh'
+
+# Mobile
+mobile:
+  - mobile/**
+  - app/**
+  - '**/*.mobile.*'
+
+# Dependencies
+dependencies:
+  - package*.json
+  - yarn.lock
+  - pnpm-lock.yaml
+  - bun.lockb

@@ -7,6 +7,262 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ============================================
+// Auth & Users
+// ============================================
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String
+  passwordSalt        String
+  role                String    @default("member") // member, operator, admin
+  permissions         String    @default("read,write") // comma-separated
+  onboardingCompleted Boolean   @default(false)
+  trustScore          Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  profile             UserProfile?
+  offers              Offer[]
+  requests            Request[]
+  sentProposals       MarketProposal[] @relation("ProposalProvider")
+  receivedProposals   MarketProposal[] @relation("ProposalClient")
+  providerDeals       Deal[]           @relation("DealProvider")
+  clientDeals         Deal[]           @relation("DealClient")
+  reviewsWritten      Review[]         @relation("ReviewReviewer")
+  transactions        Transaction[]
+}
+
+model UserProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String?
+  bio         String?
+  avatarUrl   String?
+  location    String?
+  website     String?
+  skills      String?  // JSON array stored as string
+  goals       String?  // JSON array stored as string
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// Marketplace: Offers
+// ============================================
+
+model Offer {
+  id             String    @id @default(uuid())
+  providerId     String
+  provider       User      @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  category       String?
+  price          Float
+  currency       String    @default("USD")
+  pricingType    String    @default("fixed") // fixed, hourly, negotiable
+  status         String    @default("active") // active, inactive, archived, completed
+  skills         String?   // JSON array stored as string
+  deliveryTime   Int?      // in days
+  revisions      Int?
+  views          Int       @default(0)
+  likes          Int       @default(0)
+  proposalsCount Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  proposals      MarketProposal[] @relation("ProposalOffer")
+  deals          Deal[]           @relation("DealOffer")
+  reviews        Review[]         @relation("ReviewOffer")
+}
+
+// ============================================
+// Marketplace: Requests
+// ============================================
+
+model Request {
+  id              String    @id @default(uuid())
+  requesterId     String
+  requester       User      @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  category        String?
+  budgetMin       Float?
+  budgetMax       Float?
+  budgetCurrency  String    @default("USD")
+  budgetNegotiable Boolean  @default(true)
+  status          String    @default("open") // open, in_progress, completed, archived
+  urgency         String?   // low, medium, high, urgent
+  skills          String?   // JSON array stored as string
+  deadline        String?
+  locationType    String?   // remote, onsite, hybrid
+  locationCity    String?
+  locationCountry String?
+  durationValue   Int?
+  durationUnit    String?   // hours, days, weeks, months
+  experienceLevel String?   // beginner, intermediate, expert
+  proposalsCount  Int       @default(0)
+  views           Int       @default(0)
+  likes           Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  proposals       MarketProposal[] @relation("ProposalRequest")
+  deals           Deal[]           @relation("DealRequest")
+}
+
+// ============================================
+// Marketplace: Proposals
+// ============================================
+
+model MarketProposal {
+  id                    String    @id @default(uuid())
+  offerId               String?
+  offer                 Offer?    @relation("ProposalOffer", fields: [offerId], references: [id])
+  requestId             String?
+  request               Request?  @relation("ProposalRequest", fields: [requestId], references: [id])
+  providerId            String
+  provider              User      @relation("ProposalProvider", fields: [providerId], references: [id])
+  clientId              String
+  client                User      @relation("ProposalClient", fields: [clientId], references: [id])
+  status                String    @default("pending") // pending, accepted, rejected, expired, withdrawn, negotiating
+  title                 String
+  message               String
+  proposedAmount        Float
+  currency              String    @default("USD")
+  estimatedDeliveryDays Int
+  coverLetter           String?
+  attachments           String?   // JSON array stored as string
+  revisions             Int?
+  views                 Int       @default(0)
+  likedByClient         Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  deals                 Deal[]    @relation("DealProposal")
+}
+
+// ============================================
+// Marketplace: Deals
+// ============================================
+
+model Deal {
+  id              String    @id @default(uuid())
+  offerId         String?
+  offer           Offer?    @relation("DealOffer", fields: [offerId], references: [id])
+  requestId       String?
+  request         Request?  @relation("DealRequest", fields: [requestId], references: [id])
+  proposalId      String?
+  proposal        MarketProposal? @relation("DealProposal", fields: [proposalId], references: [id])
+  providerId      String
+  provider        User      @relation("DealProvider", fields: [providerId], references: [id])
+  clientId        String
+  client          User      @relation("DealClient", fields: [clientId], references: [id])
+  status          String    @default("created") // created, funded, submitted, released, disputed, refunded, etc.
+  title           String
+  description     String?
+  amount          Float
+  currency        String    @default("USD")
+  fundedAmount    Float     @default(0)
+  releasedAmount  Float     @default(0)
+  serviceFee      Float     @default(0)
+  views           Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  milestones      Milestone[]
+  timeline        TimelineEvent[]
+  reviews         Review[]
+  transactions    Transaction[]
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  dealId      String
+  deal        Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  amount      Float
+  status      String    @default("pending") // pending, in_progress, submitted, approved, rejected
+  dueDate     String?
+  submittedAt String?
+  approvedAt  String?
+  feedback    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model TimelineEvent {
+  id          String   @id @default(uuid())
+  dealId      String
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  type        String   // status_change, payment, milestone_update, dispute, message
+  title       String
+  description String?
+  status      String?
+  amount      Float?
+  milestoneId String?
+  userId      String?
+  userName    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// Reviews
+// ============================================
+
+model Review {
+  id           String   @id @default(uuid())
+  dealId       String
+  deal         Deal     @relation(fields: [dealId], references: [id])
+  reviewerId   String
+  reviewer     User     @relation("ReviewReviewer", fields: [reviewerId], references: [id])
+  reviewerRole String   // client, provider
+  subjectType  String   @default("user") // user, offer
+  subjectId    String
+  offerId      String?
+  offer        Offer?   @relation("ReviewOffer", fields: [offerId], references: [id])
+  rating       Int      // 1-5
+  comment      String
+  tags         String?  // JSON array stored as string
+  helpfulCount Int      @default(0)
+  reported     Boolean  @default(false)
+  status       String   @default("approved") // pending, approved, flagged, removed
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ============================================
+// Transactions
+// ============================================
+
+model Transaction {
+  id              String   @id @default(uuid())
+  dealId          String
+  deal            Deal     @relation(fields: [dealId], references: [id])
+  amount          Float
+  currency        String   @default("USD")
+  type            String   // fund, release, refund, payout, service_fee, dispute_resolution
+  status          String   @default("pending") // pending, processing, completed, failed, cancelled, refunded
+  referenceNumber String   @unique
+  description     String?
+  paymentMethod   String?
+  receiptId       String?
+  metadata        String?  // JSON object stored as string
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  userName        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// Legacy: Thread-based messaging (existing)
+// ============================================
+
 model Thread {
   id        String     @id
   topic     String
@@ -14,7 +270,7 @@ model Thread {
   createdAt DateTime
   updatedAt DateTime
   messages  Message[]
-  proposals Proposal[]
+  proposals LegacyProposal[]
 }
 
 model Message {
@@ -26,7 +282,7 @@ model Message {
   timestamp DateTime
 }
 
-model Proposal {
+model LegacyProposal {
   id           String   @id
   thread       Thread   @relation(fields: [threadId], references: [id])
   threadId     String

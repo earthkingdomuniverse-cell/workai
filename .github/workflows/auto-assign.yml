@@ -1,0 +1,53 @@
+# ============================================
+# Auto-assign Workflow
+# Automatically assigns issues and PRs to code owners
+# ============================================
+
+name: Auto Assign
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Auto-assign Issue
+        if: github.event_name == 'issues'
+        uses: pozil/auto-assign-issue@v1
+        with:
+          assignees: earthkingdomuniverse-cell
+          numOfAssignee: 1
+          allowSelfAssign: true
+          removePreviousAssignees: false
+
+      - name: Auto-assign PR
+        if: github.event_name == 'pull_request'
+        uses: pozil/auto-assign-issue@v1
+        with:
+          assignees: ${{ github.actor }}
+          numOfAssignee: 1
+          allowSelfAssign: true
+
+      - name: Request Review
+        if: github.event_name == 'pull_request'
+        uses: necojackarc/auto-request-review@v0.13.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config: >
+            reviewers:
+              - earthkingdomuniverse-cell
+            options:
+              ignore_draft: true
+              number_of_reviewers: 1

@@ -1,3 +1,4 @@
+import { prisma } from '../../db/prismaClient';
 import { AuthUser, UserRole } from './types';
 
 interface UserRecord extends AuthUser {
@@ -18,20 +19,44 @@ export interface AuthRepository {
   delete(id: string): Promise<void>;
 }
 
-class InMemoryAuthRepository implements AuthRepository {
-  private users: Map<string, UserRecord> = new Map();
+function permissionsForRole(role: string): string[] {
+  if (role === 'admin') return ['read', 'write', 'delete', 'admin'];
+  if (role === 'operator') return ['read', 'write', 'delete'];
+  return ['read', 'write'];
+}
 
+function toAuthUser(row: any): AuthUser {
+  return {
+    id: row.id,
+    email: row.email,
+    role: row.role as UserRole,
+    permissions: row.permissions ? row.permissions.split(',') : permissionsForRole(row.role),
+    onboardingCompleted: row.onboardingCompleted,
+    trustScore: row.trustScore ?? undefined,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+  };
+}
+
+function toUserRecord(row: any): UserRecord {
+  return {
+    ...toAuthUser(row),
+    passwordHash: row.passwordHash,
+    passwordSalt: row.passwordSalt,
+  };
+}
+
+class PrismaAuthRepository implements AuthRepository {
   async findByEmail(email: string): Promise<UserRecord | null> {
-    const user = Array.from(this.users.values()).find((u) => u.email === email);
-    return user || null;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return null;
+    return toUserRecord(user);
   }
 
   async findById(id: string): Promise<AuthUser | null> {
-    const user = this.users.get(id);
+    const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return null;
-
-    const { passwordHash, passwordSalt, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return toAuthUser(user);
   }
 
   async create(data: {
@@ -40,49 +65,39 @@ class InMemoryAuthRepository implements AuthRepository {
     passwordSalt: string;
     role: UserRole;
   }): Promise<AuthUser> {
-    const id = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const now = new Date().toISOString();
-
-    const user: UserRecord = {
-      id,
-      email: data.email,
-      role: data.role,
-      permissions: data.role === 'admin' ? ['read', 'write', 'delete', 'admin'] : ['read', 'write'],
-      onboardingCompleted: false,
-      trustScore: undefined,
-      passwordHash: data.passwordHash,
-      passwordSalt: data.passwordSalt,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.users.set(id, user);
-
-    const { passwordHash, passwordSalt, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    const permissions = permissionsForRole(data.role);
+    const user = await prisma.user.create({
+      data: {
+        email: data.email,
+        passwordHash: data.passwordHash,
+        passwordSalt: data.passwordSalt,
+        role: data.role,
+        permissions: permissions.join(','),
+        onboardingCompleted: false,
+      },
+    });
+    return toAuthUser(user);
   }
 
   async update(id: string, data: Partial<AuthUser>): Promise<AuthUser> {
-    const existing = this.users.get(id);
-    if (!existing) {
-      throw new Error(`User ${id} not found`);
-    }
+    const updateData: any = {};
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.onboardingCompleted !== undefined)
+      updateData.onboardingCompleted = data.onboardingCompleted;
+    if (data.trustScore !== undefined) updateData.trustScore = data.trustScore;
+    if (data.permissions !== undefined) updateData.permissions = data.permissions.join(',');
 
-    const updated: UserRecord = {
-      ...existing,
-      ...data,
-      updatedAt: new Date().toISOString(),
-    } as UserRecord;
-
-    this.users.set(id, updated);
-
-    const { passwordHash, passwordSalt, ...userWithoutPassword } = updated;
-    return userWithoutPassword;
+    const user = await prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
+    return toAuthUser(user);
   }
 
   async delete(id: string): Promise<void> {
-    this.users.delete(id);
+    await prisma.user.delete({ where: { id } });
   }
 }
 
-export const authRepository: AuthRepository = new InMemoryAuthRepository();
+export const authRepository: AuthRepository = new PrismaAuthRepository();

@@ -1,73 +1,84 @@
-# Dependabot configuration
-# https://docs.github.com/en/code-security/dependabot
+# ============================================
+# Dependabot Configuration
+# Automated dependency updates
+# ============================================
 
 version: 2
 updates:
-  # Backend (root)
-  - package-ecosystem: 'npm'
-    directory: '/'
+  # ----------------------------------------
+  # Node.js / npm
+  # ----------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
-      interval: 'weekly'
-      day: 'monday'
-      time: '09:00'
-      timezone: 'Asia/Ho_Chi_Minh'
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Ho_Chi_Minh"
     open-pull-requests-limit: 10
+    reviewers:
+      - "earthkingdomuniverse-cell"
+    assignees:
+      - "earthkingdomuniverse-cell"
     labels:
-      - 'dependencies'
-      - 'backend'
+      - "dependencies"
+      - "automated"
     commit-message:
-      prefix: 'chore(deps):'
+      prefix: "chore(deps)"
+      include: "scope"
     groups:
-      typescript:
+      # Group minor and patch updates
+      minor-patch:
         patterns:
-          - 'typescript'
-          - '@typescript-eslint/*'
-          - '@types/*'
-      fastify:
-        patterns:
-          - 'fastify'
-          - '@fastify/*'
-      testing:
-        patterns:
-          - 'vitest'
-          - '@vitest/*'
-      linting:
-        patterns:
-          - 'eslint'
-          - 'eslint-*'
-          - 'prettier'
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group dev dependencies
+      dev-dependencies:
+        dependency-type: "development"
+    ignore:
+      # Ignore major version updates (manual review required)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
-  # Mobile (Expo)
-  - package-ecosystem: 'npm'
-    directory: '/mobile'
-    schedule:
-      interval: 'weekly'
-      day: 'monday'
-      time: '09:00'
-      timezone: 'Asia/Ho_Chi_Minh'
-    open-pull-requests-limit: 5
-    labels:
-      - 'dependencies'
-      - 'mobile'
-    commit-message:
-      prefix: 'chore(mobile-deps):'
-    groups:
-      expo:
-        patterns:
-          - 'expo'
-          - 'expo-*'
-      react-native:
-        patterns:
-          - 'react-native'
-          - 'react-native-*'
-
+  # ----------------------------------------
   # GitHub Actions
-  - package-ecosystem: 'github-actions'
-    directory: '/'
+  # ----------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: 'weekly'
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "earthkingdomuniverse-cell"
     labels:
-      - 'dependencies'
-      - 'ci'
+      - "dependencies"
+      - "github-actions"
+      - "automated"
     commit-message:
-      prefix: 'chore(ci):'
+      prefix: "chore(ci)"
+      include: "scope"
+
+  # ----------------------------------------
+  # Docker
+  # ----------------------------------------
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "09:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "earthkingdomuniverse-cell"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore(docker)"
+      include: "scope"

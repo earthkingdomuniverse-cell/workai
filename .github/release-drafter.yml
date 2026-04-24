@@ -1,0 +1,96 @@
+# ============================================
+# Release Drafter Configuration
+# https://github.com/release-drafter/release-drafter
+# ============================================
+
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: 'Breaking Changes'
+    labels:
+      - 'breaking'
+      - 'breaking-change'
+
+  - title: 'New Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+      - 'new-feature'
+
+  - title: 'Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+
+  - title: 'Performance Improvements'
+    labels:
+      - 'performance'
+      - 'optimization'
+
+  - title: 'Security'
+    labels:
+      - 'security'
+      - 'vulnerability'
+
+  - title: 'Documentation'
+    labels:
+      - 'docs'
+      - 'documentation'
+
+  - title: 'Maintenance'
+    labels:
+      - 'chore'
+      - 'maintenance'
+      - 'refactor'
+
+  - title: 'Dependencies'
+    labels:
+      - 'dependencies'
+      - 'deps'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking'
+      - 'breaking-change'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+      - 'enhancement'
+      - 'new-feature'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'docs'
+      - 'documentation'
+      - 'chore'
+      - 'maintenance'
+      - 'dependencies'
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ## Contributors
+
+  Thanks to $CONTRIBUTORS for their contributions to this release!
+
+  ## Installation
+
+  ```bash
+  docker pull ghcr.io/earthkingdomuniverse-cell/workai:v$RESOLVED_VERSION
+  ```
+
+no-changes-template: '* No changes'

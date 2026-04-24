@@ -1,0 +1,40 @@
+# ============================================
+# PR Labeler Configuration
+# Maps branch prefixes to labels
+# ============================================
+
+# Feature branches
+feature: ['feature/*', 'feat/*', 'enhancement/*']
+
+# Bug fixes
+bug: ['fix/*', 'bugfix/*', 'bug/*', 'hotfix/*']
+
+# Maintenance
+maintenance: ['chore/*', 'maintenance/*', 'cleanup/*']
+
+# Documentation
+docs: ['docs/*', 'documentation/*', 'doc/*']
+
+# Refactoring
+refactor: ['refactor/*', 'refactoring/*', 'restructure/*']
+
+# Performance
+performance: ['perf/*', 'performance/*', 'optimize/*']
+
+# Security
+security: ['security/*', 'sec/*', 'vuln/*']
+
+# Dependencies
+dependencies: ['deps/*', 'dependencies/*', 'dependabot/*']
+
+# CI/CD
+ci: ['ci/*', 'github/*', 'workflow/*']
+
+# Tests
+tests: ['test/*', 'tests/*', 'testing/*']
+
+# Database
+database: ['db/*', 'database/*', 'migration/*', 'schema/*']
+
+# Releases
+release: ['release/*', 'version/*']

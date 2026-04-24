@@ -1,52 +1,92 @@
-## 🧭 Product Summary
+<!--
+Thank you for your contribution! Please fill out the template below.
+-->
 
-[Mô tả thay đổi này phục vụ outcome sản phẩm nào]
+## Description
 
-## 👥 Người dùng bị tác động
+<!-- Describe your changes -->
 
-- [ ] Client
-- [ ] Provider
-- [ ] Operator / Admin
-- [ ] Internal team
+Fixes # (issue)
 
-## 🚀 Loại thay đổi
+## Type of Change
 
-- [ ] ✨ Feature (Tính năng mới)
-- [ ] 🐛 Fix (Sửa lỗi)
-- [ ] 🧹 Refactor (Tái cấu trúc mã nguồn)
-- [ ] 📝 Documentation (Cập nhật tài liệu)
-- [ ] ⚡ Performance (Cải thiện hiệu năng)
-- [ ] 🔧 Chore (Cập nhật build script, công cụ...)
+<!-- Mark the relevant option with an [x] -->
 
-## 📈 Kết quả kỳ vọng
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+- [ ] Performance improvement
+- [ ] Code refactoring
+- [ ] Dependency update
+- [ ] CI/CD improvement
+- [ ] Security fix
 
-[Metric, hành vi hoặc điểm nghẽn nào sẽ được cải thiện]
+## Changes Made
 
-## 🧪 Cách kiểm tra
+<!-- List the main changes -->
 
-- [ ] Đã chạy `npm run lint`
-- [ ] Đã chạy `npm run typecheck`
-- [ ] Đã chạy `npm run test:coverage`
-- [ ] Đã kiểm tra thủ công trên môi trường local
-- [ ] [Mô tả thêm các bước test khác nếu có]
+1.
+2.
+3.
 
-## 🚦 Rollout / Risk
+## Testing
 
-- Rollout plan:
-- Risk nếu thay đổi sai:
-- Có cần theo dõi sau merge không:
+<!-- Describe the tests you ran -->
 
-## 📸 Screenshots (Nếu có thay đổi UI)
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing performed
 
-[Chèn ảnh vào đây]
+**Test Configuration:**
 
-## 🔗 Liên kết liên quan
+- OS:
+- Node Version:
+- Database:
 
-- Fixes # (Issue number)
+## Checklist
 
-## ✅ Danh sách kiểm tra (Checklist)
+<!-- Mark all that apply with an [x] -->
 
-- [ ] Code của tôi tuân thủ hướng dẫn về phong cách của dự án
-- [ ] Tôi đã tự review code của mình
-- [ ] Tôi đã cập nhật docs nếu thay đổi này ảnh hưởng user flow, API hoặc product copy
-- [ ] Các thay đổi của tôi không làm phát sinh warning hoặc regression đã biết
+- [ ] My code follows the project's style guidelines
+- [ ] I have performed a self-review of my code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] New and existing unit tests pass locally with my changes
+- [ ] Any dependent changes have been merged and published
+
+## Screenshots (if applicable)
+
+<!-- Add screenshots to help explain your changes -->
+
+## Related Issues
+
+<!-- Link to related issues -->
+
+Fixes #
+Related to #
+
+## Deployment Notes
+
+<!-- Any special notes for deployment -->
+
+- [ ] Database migration required
+- [ ] Environment variable changes required
+- [ ] API changes (breaking)
+- [ ] Infrastructure changes
+
+## Reviewers
+
+<!-- Tag reviewers -->
+
+@earthkingdomuniverse-cell
+
+## Additional Notes
+
+<!-- Add any other notes -->
+
+---
+
+By submitting this PR, I agree that my contributions will be licensed under the project's license.

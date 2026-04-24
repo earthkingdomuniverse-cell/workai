@@ -1,50 +1,85 @@
-name: ✨ Feature Request
-description: Suggest an idea for WorkAI
-title: '[Feature] '
-labels:
-  - feature
-  - product
+name: Feature Request
+description: Suggest a new feature or enhancement
+labels: ["enhancement", "needs-triage"]
+assignees:
+  - earthkingdomuniverse-cell
 body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        Thank you for suggesting a new feature!
+
+  - type: input
+    id: title
+    attributes:
+      label: Feature Title
+      description: A clear and concise title
+      placeholder: "e.g., Add OAuth2 login support"
+    validations:
+      required: true
+
   - type: textarea
-    id: problem
+    id: description
     attributes:
-      label: Vấn đề của bạn có liên quan đến một trở ngại nào không?
-      description: 'Mô tả rõ ràng và ngắn gọn về vấn đề là gì. Ví dụ: Tôi luôn bực bội khi [...]'
+      label: Description
+      description: Describe the feature you'd like
+      placeholder: A clear description of the feature...
     validations:
       required: true
-  - type: dropdown
-    id: segment
-    attributes:
-      label: Nhóm người dùng chịu tác động chính
-      options:
-        - Client
-        - Provider
-        - Operator / Admin
-        - Internal team
-    validations:
-      required: true
+
   - type: textarea
-    id: solution
+    id: motivation
     attributes:
-      label: Giải pháp mong muốn
-      description: Mô tả rõ ràng và ngắn gọn về những gì bạn muốn xảy ra.
+      label: Motivation
+      description: Why is this feature needed?
+      placeholder: Describe the problem this solves...
     validations:
       required: true
+
   - type: textarea
-    id: outcome
+    id: proposed_solution
     attributes:
-      label: Kết quả kỳ vọng
-      description: Nếu triển khai, chỉ số hoặc hành vi nào sẽ cải thiện?
-      placeholder: Tăng conversion proposal, giảm thời gian xử lý dispute, tăng retention tuần 1...
+      label: Proposed Solution
+      description: How do you envision this working?
+      placeholder: Describe your proposed solution...
     validations:
-      required: true
+      required: false
+
   - type: textarea
     id: alternatives
     attributes:
-      label: Các giải pháp thay thế
-      description: Mô tả rõ ràng và ngắn gọn về bất kỳ giải pháp hoặc tính năng thay thế nào bạn đã xem xét.
+      label: Alternatives Considered
+      description: What alternatives have you considered?
+      placeholder: Describe alternatives...
+    validations:
+      required: false
+
   - type: textarea
-    id: context
+    id: use_cases
     attributes:
-      label: Ngữ cảnh bổ sung
-      description: Thêm bất kỳ thông tin hoặc ảnh chụp màn hình nào khác về yêu cầu tính năng ở đây.
+      label: Use Cases
+      description: Who would benefit from this feature?
+      placeholder: "1. User type A would use this for..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve workflow
+        - High - Blocker for current work
+        - Critical - Urgent requirement
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any mockups, references, or additional info
+      placeholder: Add any other context...

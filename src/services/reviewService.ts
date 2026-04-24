@@ -1,7 +1,24 @@
 import { Review, ReviewAggregate, CreateReviewInput, ReviewFilter } from '../types/review';
-import { mockReviews } from '../mocks/reviews';
 import { AppError } from '../lib/errors';
-import { liveMockDeals } from '../routes/deals';
+import { prisma } from '../db/prismaClient';
+
+function parseJsonArray(val: string | null | undefined): string[] {
+  if (!val) return [];
+  try {
+    return JSON.parse(val);
+  } catch {
+    return [];
+  }
+}
+
+function formatReview(r: any): Review {
+  return {
+    ...r,
+    tags: parseJsonArray(r.tags),
+    createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+    updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt),
+  };
+}
 
 export interface ReviewService {
   createReview(
@@ -19,7 +36,7 @@ export interface ReviewService {
   canSubmitReview(dealId: string, reviewerId: string): Promise<boolean>;
 }
 
-class ReviewServiceImpl implements ReviewService {
+class PrismaReviewService implements ReviewService {
   async createReview(
     data: CreateReviewInput,
     reviewerId: string,
@@ -47,9 +64,9 @@ class ReviewServiceImpl implements ReviewService {
       });
     }
 
-    const duplicate = mockReviews.find(
-      (item) => item.dealId === data.dealId && item.reviewerId === reviewerId,
-    );
+    const duplicate = await prisma.review.findFirst({
+      where: { dealId: data.dealId, reviewerId },
+    });
     if (duplicate) {
       throw new AppError('Review already submitted for this deal by this user', {
         code: 'CONFLICT_ERROR',
@@ -57,72 +74,66 @@ class ReviewServiceImpl implements ReviewService {
       });
     }
 
-    // Create review
-    const review: Review = {
-      id: `review_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      dealId: data.dealId,
-      reviewerId,
-      reviewerRole,
-      subjectType: data.subjectType,
-      subjectId: data.subjectId,
-      rating: data.rating,
-      comment: data.comment,
-      tags: data.tags,
-      helpfulCount: 0,
-      reported: false,
-      status: 'approved',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const review = await prisma.review.create({
+      data: {
+        dealId: data.dealId,
+        reviewerId,
+        reviewerRole,
+        subjectType: data.subjectType,
+        subjectId: data.subjectId,
+        offerId: data.subjectType === 'offer' ? data.subjectId : null,
+        rating: data.rating,
+        comment: data.comment,
+        tags: JSON.stringify(data.tags),
+        status: 'approved',
+      },
+    });
 
-    mockReviews.push(review);
-    return review;
+    return formatReview(review);
   }
 
   async getReviews(filters?: ReviewFilter): Promise<Review[]> {
-    let reviews = [...mockReviews];
-
+    const where: any = {};
     if (filters) {
-      if (filters.subjectId) {
-        reviews = reviews.filter((r) => r.subjectId === filters.subjectId);
-      }
-
-      if (filters.subjectType) {
-        reviews = reviews.filter((r) => r.subjectType === filters.subjectType);
-      }
-
-      if (filters.reviewerId) {
-        reviews = reviews.filter((r) => r.reviewerId === filters.reviewerId);
-      }
-
-      if (filters.rating) {
-        reviews = reviews.filter((r) => r.rating === filters.rating);
-      }
+      if (filters.subjectId) where.subjectId = filters.subjectId;
+      if (filters.subjectType) where.subjectType = filters.subjectType;
+      if (filters.reviewerId) where.reviewerId = filters.reviewerId;
+      if (filters.rating) where.rating = filters.rating;
     }
 
-    return reviews;
+    const reviews = await prisma.review.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+    return reviews.map(formatReview);
   }
 
   async getReviewById(id: string): Promise<Review | null> {
-    const review = mockReviews.find((r) => r.id === id);
-    return review || null;
+    const review = await prisma.review.findUnique({ where: { id } });
+    return review ? formatReview(review) : null;
   }
 
   async getReviewsByUserId(userId: string): Promise<Review[]> {
-    return mockReviews.filter((r) => r.subjectType === 'user' && r.subjectId === userId);
+    const reviews = await prisma.review.findMany({
+      where: { subjectType: 'user', subjectId: userId },
+    });
+    return reviews.map(formatReview);
   }
 
   async getReviewsByOfferId(offerId: string): Promise<Review[]> {
-    return mockReviews.filter((r) => r.subjectType === 'offer' && r.subjectId === offerId);
+    const reviews = await prisma.review.findMany({
+      where: { subjectType: 'offer', subjectId: offerId },
+    });
+    return reviews.map(formatReview);
   }
 
   async getReviewAggregate(
     subjectType: 'user' | 'offer',
     subjectId: string,
   ): Promise<ReviewAggregate> {
-    const reviews = subjectId
-      ? mockReviews.filter((r) => r.subjectType === subjectType && r.subjectId === subjectId)
-      : mockReviews;
+    const reviews = await prisma.review.findMany({
+      where: { subjectType, subjectId },
+    });
 
     if (reviews.length === 0) {
       return {
@@ -133,20 +144,18 @@ class ReviewServiceImpl implements ReviewService {
       } as ReviewAggregate;
     }
 
-    // Calculate average rating
     const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
     const averageRating = totalRating / reviews.length;
 
-    // Calculate rating distribution
     const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     reviews.forEach((r) => {
-      (ratingDistribution as any)[r.rating as 1 | 2 | 3 | 4 | 5]++;
+      (ratingDistribution as any)[r.rating]++;
     });
 
-    // Collect tags
     const tagCounts: Record<string, number> = {};
     reviews.forEach((r) => {
-      r.tags.forEach((tag) => {
+      const tags = parseJsonArray(r.tags);
+      tags.forEach((tag: string) => {
         tagCounts[tag] = (tagCounts[tag] || 0) + 1;
       });
     });
@@ -164,37 +173,26 @@ class ReviewServiceImpl implements ReviewService {
   }
 
   async updateReview(id: string, data: Partial<CreateReviewInput>): Promise<Review> {
-    const index = mockReviews.findIndex((r) => r.id === id);
-    if (index === -1) {
-      throw new Error(`Review ${id} not found`);
-    }
+    const updateData: any = {};
+    if (data.rating !== undefined) updateData.rating = data.rating;
+    if (data.comment !== undefined) updateData.comment = data.comment;
+    if (data.tags !== undefined) updateData.tags = JSON.stringify(data.tags);
 
-    const updated = {
-      ...mockReviews[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-
-    mockReviews[index] = updated;
-    return updated;
+    const review = await prisma.review.update({ where: { id }, data: updateData });
+    return formatReview(review);
   }
 
   async deleteReview(id: string): Promise<void> {
-    const index = mockReviews.findIndex((r) => r.id === id);
-    if (index === -1) {
-      throw new Error(`Review ${id} not found`);
-    }
-    mockReviews.splice(index, 1);
+    await prisma.review.delete({ where: { id } });
   }
 
   async canSubmitReview(dealId: string, reviewerId: string): Promise<boolean> {
-    const deal = liveMockDeals.find((item) => item.id === dealId);
+    const deal = await prisma.deal.findUnique({ where: { id: dealId } });
     if (!deal || deal.status !== 'released') {
       return false;
     }
-
     return [deal.clientId, deal.providerId].includes(reviewerId);
   }
 }
 
-export const reviewService: ReviewService = new ReviewServiceImpl();
+export const reviewService: ReviewService = new PrismaReviewService();

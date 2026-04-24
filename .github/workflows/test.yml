@@ -1,0 +1,342 @@
+/**
+ * Test Workflow Configuration
+ * Task 8.1: Test Workflow Configuration
+ * 
+ * GitHub Actions workflow for running all test suites
+ */
+
+name: CI - Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - e2e
+
+env:
+  NODE_VERSION: '20.19.0'
+  DATABASE_URL: postgresql://test:test@localhost:5432/workai_test
+  JWT_SECRET: test-jwt-secret-for-ci
+  CI: true
+
+jobs:
+  # ----------------------------------------
+  # Job 1: Setup & Cache Dependencies
+  # ----------------------------------------
+  setup:
+    name: Setup Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+  # ----------------------------------------
+  # Job 2: Lint & Type Check
+  # ----------------------------------------
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript check
+        run: npm run typecheck
+
+      - name: Check formatting
+        run: npm run format:check
+
+  # ----------------------------------------
+  # Job 3: Unit Tests
+  # ----------------------------------------
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit -- --coverage --reporters=default --reporters=jest-junit
+        env:
+          JEST_JUNIT_OUTPUT_DIR: ./reports
+          JEST_JUNIT_OUTPUT_NAME: junit-unit.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: unit-tests
+          name: unit-tests
+          fail_ci_if_error: false
+
+      - name: Upload unit test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: |
+            reports/junit-unit.xml
+            coverage/
+
+  # ----------------------------------------
+  # Job 4: Integration Tests
+  # ----------------------------------------
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: workai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup database
+        run: |
+          npm run db:generate
+          npm run db:migrate:test
+
+      - name: Run integration tests
+        run: npm run test:integration -- --reporters=default --reporters=jest-junit
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          REDIS_URL: redis://localhost:6379/1
+          JEST_JUNIT_OUTPUT_DIR: ./reports
+          JEST_JUNIT_OUTPUT_NAME: junit-integration.xml
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            reports/junit-integration.xml
+            coverage/
+
+  # ----------------------------------------
+  # Job 5: Security Scan
+  # ----------------------------------------
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Run Snyk test
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # ----------------------------------------
+  # Job 6: SonarQube Analysis
+  # ----------------------------------------
+  sonarqube:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-results
+          path: coverage
+
+      - name: SonarQube Scan
+        uses: sonarqube-quality-gate-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  # ----------------------------------------
+  # Job 7: Test Summary
+  # ----------------------------------------
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, security-scan]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+
+      - name: Generate test summary
+        uses: test-summary/action@v2
+        with:
+          paths: |
+            **/reports/junit-*.xml
+
+      - name: Create status comment
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const testComment = comments.find(comment => 
+              comment.body.includes('## Test Results')
+            );
+            
+            const body = `## Test Results
+            
+            | Test Type | Status |
+            |-----------|--------|
+            | Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅' || '❌' }} |
+            | Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅' || '❌' }} |
+            | Security Scan | ${{ needs.security-scan.result == 'success' && '✅' || '❌' }} |
+            | SonarQube | ${{ needs.sonarqube.result == 'success' && '✅' || '❌' }} |
+            
+            [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            if (testComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: testComment.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+
+      - name: Fail if tests failed
+        if: |
+          needs.unit-tests.result == 'failure' ||
+          needs.integration-tests.result == 'failure' ||
+          needs.security-scan.result == 'failure'
+        run: |
+          echo "Tests failed. See details above."
+          exit 1

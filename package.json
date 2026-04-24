@@ -24,7 +24,8 @@
     "prestart": "npm run db:deploy",
     "postinstall": "npm run prisma:generate",
     "prepare": "husky",
-    "swarm": "npx tsx scripts/ai-swarm.ts --providers=5 --clients=5 --cycles=3",
+    "swarm:seed": "tsx scripts/swarm.ts seed",
+    "swarm:simulate": "tsx scripts/swarm.ts simulate",
     "docs-serve": "npx http-server docs -p 8080",
     "build-docs-index": "node scripts/build_docs_index.js"
   },

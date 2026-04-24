@@ -1,0 +1,63 @@
+name: Security Issue
+description: Report a security vulnerability (private)
+labels: ["security", "confidential"]
+assignees:
+  - earthkingdomuniverse-cell
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Security Issue Report
+
+        **⚠️ IMPORTANT:** If this is a critical security vulnerability, please consider emailing security@skillvalue.ai instead of creating a public issue.
+
+        This report will be treated with highest priority and kept confidential.
+
+  - type: input
+    id: severity
+    attributes:
+      label: Severity Level
+      description: CVSS score or severity estimation
+      placeholder: "e.g., CVSS 8.5 (High)"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Vulnerability Description
+      description: Describe the security issue
+      placeholder: Detailed description of the vulnerability...
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential Impact
+      description: What could an attacker do?
+      placeholder: Describe the potential damage...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can this be reproduced?
+      placeholder: Step-by-step reproduction...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested Mitigation
+      description: Do you have suggestions for fixing this?
+      placeholder: Proposed fix or mitigation...
+
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure
+      options:
+        - label: I have not publicly disclosed this vulnerability
+        - label: I agree to responsible disclosure practices

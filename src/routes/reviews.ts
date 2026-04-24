@@ -1,10 +1,18 @@
 import { FastifyPluginAsync } from 'fastify';
 import { createdResponse, successResponse } from '../lib/response';
 import { authenticate } from '../lib/auth';
-import { mockReviews } from '../mocks/reviews';
-import { ReviewAggregate } from '../types/review';
 import { AppError } from '../lib/errors';
+import { prisma } from '../db/prismaClient';
 import { reviewService } from '../services/reviewService';
+
+function parseJsonArray(val: string | null | undefined): string[] {
+  if (!val) return [];
+  try {
+    return JSON.parse(val);
+  } catch {
+    return [];
+  }
+}
 
 async function requireReviewUser(request: any, reply: any) {
   const user = await authenticate(request, reply);
@@ -22,90 +30,48 @@ const reviews: FastifyPluginAsync = async (fastify) => {
   fastify.get('/reviews', async (request, reply) => {
     const { subjectType, subjectId, reviewerId, rating } = request.query as any;
 
-    let filtered = [...mockReviews];
+    const where: any = {};
+    if (subjectType) where.subjectType = subjectType;
+    if (subjectId) where.subjectId = subjectId;
+    if (reviewerId) where.reviewerId = reviewerId;
+    if (rating) where.rating = Number(rating);
 
-    if (subjectType) {
-      filtered = filtered.filter((item) => item.subjectType === subjectType);
-    }
-    if (subjectId) {
-      filtered = filtered.filter((item) => item.subjectId === subjectId);
-    }
-    if (reviewerId) {
-      filtered = filtered.filter((item) => item.reviewerId === reviewerId);
-    }
-    if (rating) {
-      filtered = filtered.filter((item) => item.rating === rating);
-    }
+    const items = await prisma.review.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
 
-    return successResponse(reply, { items: filtered, total: filtered.length });
+    const formatted = items.map((r) => ({
+      ...r,
+      tags: parseJsonArray(r.tags),
+    }));
+
+    return successResponse(reply, { items: formatted, total: formatted.length });
   });
 
   // GET /api/reviews/aggregate/:subjectType/:subjectId
   fastify.get('/reviews/aggregate/:subjectType/:subjectId', async (request, reply) => {
     const { subjectType, subjectId } = request.params as { subjectType: string; subjectId: string };
-
-    const filtered = mockReviews.filter(
-      (item) => item.subjectType === subjectType && item.subjectId === subjectId,
-    );
-
-    if (filtered.length === 0) {
-      return successResponse(reply, {
-        [subjectType === 'user' ? 'userId' : 'offerId']: subjectId,
-        averageRating: 0,
-        totalReviews: 0,
-        ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        tags: [],
-      } as ReviewAggregate);
-    }
-
-    // Calculate average rating
-    const totalRating = filtered.reduce((sum, r) => sum + r.rating, 0);
-    const averageRating = Math.round((totalRating / filtered.length) * 10) / 10;
-
-    // Calculate distribution
-    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    filtered.forEach((r) => {
-      if (Object.prototype.hasOwnProperty.call(distribution, r.rating)) {
-        distribution[r.rating as keyof typeof distribution]++;
-      }
-    });
-
-    // Aggregate tags
-    const tagCounts = new Map<string, number>();
-    filtered.forEach((r) => {
-      r.tags?.forEach((tag) => {
-        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-      });
-    });
-    const tags = Array.from(tagCounts.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-
-    const aggregate: ReviewAggregate = {
-      [subjectType === 'user' ? 'userId' : 'offerId']: subjectId,
-      averageRating,
-      totalReviews: filtered.length,
-      ratingDistribution: distribution,
-      tags,
-    };
-
+    const aggregate = await reviewService.getReviewAggregate(subjectType as any, subjectId);
     return successResponse(reply, aggregate);
   });
 
   fastify.get('/reviews/by-user/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const items = mockReviews.filter(
-      (item) => item.subjectType === 'user' && item.subjectId === id,
-    );
-    return successResponse(reply, { items, total: items.length });
+    const items = await prisma.review.findMany({
+      where: { subjectType: 'user', subjectId: id },
+    });
+    const formatted = items.map((r) => ({ ...r, tags: parseJsonArray(r.tags) }));
+    return successResponse(reply, { items: formatted, total: formatted.length });
   });
 
   fastify.get('/reviews/by-offer/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const items = mockReviews.filter(
-      (item) => item.subjectType === 'offer' && item.subjectId === id,
-    );
-    return successResponse(reply, { items, total: items.length });
+    const items = await prisma.review.findMany({
+      where: { subjectType: 'offer', subjectId: id },
+    });
+    const formatted = items.map((r) => ({ ...r, tags: parseJsonArray(r.tags) }));
+    return successResponse(reply, { items: formatted, total: formatted.length });
   });
 
   fastify.post('/reviews', async (request, reply) => {

@@ -138,7 +138,7 @@ class SkillExchangeDbService {
     if (!thread) throw new Error('Thread not found');
 
     const now = new Date();
-    const proposal = await this.db.proposal.create({
+    const proposal = await this.db.legacyProposal.create({
       data: {
         id: randomUUID(),
         threadId,
@@ -165,13 +165,13 @@ class SkillExchangeDbService {
     const thread = await this.db.thread.findUnique({ where: { id: threadId } });
     if (!thread) throw new Error('Thread not found');
 
-    const existing = await this.db.proposal.findUnique({ where: { id: proposalId } });
+    const existing = await this.db.legacyProposal.findUnique({ where: { id: proposalId } });
     if (!existing || existing.threadId !== threadId) {
       throw new Error('Proposal not found');
     }
 
     const now = new Date();
-    const proposal = await this.db.proposal.update({
+    const proposal = await this.db.legacyProposal.update({
       where: { id: proposalId },
       data: { status: 'accepted', updatedAt: now },
     });
@@ -189,12 +189,12 @@ class SkillExchangeDbService {
     const thread = await this.db.thread.findUnique({ where: { id: threadId } });
     if (!thread) throw new Error('Thread not found');
 
-    const existing = await this.db.proposal.findUnique({ where: { id: proposalId } });
+    const existing = await this.db.legacyProposal.findUnique({ where: { id: proposalId } });
     if (!existing || existing.threadId !== threadId) {
       throw new Error('Proposal not found');
     }
 
-    const proposal = await this.db.proposal.update({
+    const proposal = await this.db.legacyProposal.update({
       where: { id: proposalId },
       data: { status: 'rejected', updatedAt: new Date() },
     });
