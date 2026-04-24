@@ -45,26 +45,38 @@ export const colors = {
     950: '#020617',
   },
 
-  // Status Colors
+  // Status Colors with semantic and numeric aliases
   success: {
     light: '#86efac',
     main: '#22c55e',
     dark: '#15803d',
+    300: '#86efac',
+    500: '#22c55e',
+    700: '#15803d',
   },
   error: {
     light: '#f87171',
     main: '#ef4444',
     dark: '#b91c1c',
+    300: '#f87171',
+    500: '#ef4444',
+    700: '#b91c1c',
   },
   warning: {
     light: '#fbbf24',
     main: '#f59e0b',
     dark: '#b45309',
+    300: '#fbbf24',
+    500: '#f59e0b',
+    700: '#b45309',
   },
   info: {
     light: '#67e8f9',
     main: '#06b6d4',
     dark: '#0e7490',
+    300: '#67e8f9',
+    500: '#06b6d4',
+    700: '#0e7490',
   },
 
   // Background
