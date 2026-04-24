@@ -3,6 +3,7 @@ import { createdResponse, successResponse } from '../lib/response';
 import { authenticate } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
+import { walletService } from '../services/walletService';
 
 type DealStatus = 'created' | 'funded' | 'submitted' | 'released' | 'disputed';
 
@@ -103,7 +104,7 @@ const deals: FastifyPluginAsync = async (fastify) => {
         title: String(body.title).trim(),
         description: String(body.description).trim(),
         amount,
-        currency: body.currency || 'USD',
+        currency: body.currency || 'VND',
         fundedAmount: 0,
         releasedAmount: 0,
         serviceFee: Math.round(amount * 0.05),
@@ -214,35 +215,54 @@ const deals: FastifyPluginAsync = async (fastify) => {
     const user = await requireDealUser(request, reply);
     const { id } = request.params as { id: string };
     const body = request.body as { amount?: number };
-    const existing = await prisma.deal.findUnique({ where: { id } });
+    const existing = await prisma.deal.findUnique({ where: { id }, include: includeDealRelations });
 
     if (!existing) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Deal not found' } });
     if (existing.clientId !== user.userId) {
       return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Only the client can release funds' } });
     }
 
-    ensureTransition(existing.status, 'released', ['submitted']);
-    const amount = body.amount && body.amount > 0 ? Math.min(body.amount, existing.amount) : existing.amount;
+    ensureTransition(existing.status, 'released', ['submitted', 'funded']);
 
-    const deal = await prisma.$transaction(async (tx) => {
-      await tx.transaction.create({
-        data: {
-          dealId: id,
-          userId: user.userId,
-          type: 'release',
-          status: 'completed',
-          amount,
-          currency: existing.currency,
-          provider: 'manual',
-          referenceNumber: `RELEASE-${Date.now()}`,
-        },
-      });
+    const remainingAmount = existing.amount - existing.releasedAmount;
+    const amount = body.amount && body.amount > 0 ? Math.min(body.amount, remainingAmount) : remainingAmount;
 
-      return tx.deal.update({
-        where: { id },
-        data: { status: 'released', releasedAmount: amount },
-        include: includeDealRelations,
-      });
+    if (amount <= 0) {
+      throw new AppError('No releasable amount remains', { code: 'BAD_REQUEST', statusCode: 400 });
+    }
+
+    const feeAmount = Math.min(existing.serviceFee || 0, amount);
+
+    await walletService.releaseDeal({
+      clientId: existing.clientId,
+      providerId: existing.providerId,
+      dealId: existing.id,
+      amount,
+      currency: existing.currency,
+      feeAmount,
+      idempotencyKey: `release:deal:${existing.id}:${amount}`,
+    });
+
+    await prisma.transaction.create({
+      data: {
+        dealId: id,
+        userId: user.userId,
+        type: 'release',
+        status: 'completed',
+        amount,
+        currency: existing.currency,
+        provider: 'internal_wallet',
+        referenceNumber: `RELEASE-${Date.now()}`,
+      },
+    });
+
+    const deal = await prisma.deal.update({
+      where: { id },
+      data: {
+        status: 'released',
+        releasedAmount: existing.releasedAmount + amount,
+      },
+      include: includeDealRelations,
     });
 
     return successResponse(reply, serializeDeal(deal));
