@@ -17,6 +17,7 @@ model User {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
+  wallet              Wallet?
   offers              Offer[]
   requests            WorkRequest[] @relation("ClientRequests")
   providerProposals   Proposal[]    @relation("ProviderProposals")
@@ -31,6 +32,56 @@ model User {
 
   @@index([role])
   @@index([trustScore])
+}
+
+model Wallet {
+  id          String              @id @default(uuid())
+  userId      String              @unique
+  currency    String              @default("VND")
+  available   Float               @default(0)
+  held        Float               @default(0)
+  lifetimeIn  Float               @default(0)
+  lifetimeOut Float               @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  user        User                @relation(fields: [userId], references: [id])
+  ledger      WalletLedgerEntry[]
+
+  @@index([currency])
+}
+
+model WalletLedgerEntry {
+  id             String   @id @default(uuid())
+  walletId       String
+  userId         String
+  type           String
+  direction      String
+  amount         Float
+  currency       String   @default("VND")
+  balanceBefore  Float
+  balanceAfter   Float
+  heldBefore     Float    @default(0)
+  heldAfter      Float    @default(0)
+  provider       String?
+  providerRef    String?
+  dealId         String?
+  transactionId  String?
+  idempotencyKey String   @unique
+  description    String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  wallet         Wallet   @relation(fields: [walletId], references: [id])
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([type])
+  @@index([direction])
+  @@index([provider, providerRef])
+  @@index([dealId])
+  @@index([transactionId])
+  @@index([createdAt])
 }
 
 model WorkRequest {
@@ -168,7 +219,7 @@ model Milestone {
 
 model Transaction {
   id              String   @id @default(uuid())
-  dealId          String
+  dealId          String?
   userId          String
   type            String
   status          String   @default("pending")
@@ -180,7 +231,7 @@ model Transaction {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  deal            Deal     @relation(fields: [dealId], references: [id])
+  deal            Deal?    @relation(fields: [dealId], references: [id])
   user            User     @relation(fields: [userId], references: [id])
 
   @@index([dealId])
