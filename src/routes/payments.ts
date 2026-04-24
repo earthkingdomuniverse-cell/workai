@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { getPaymentProvider } from '../services/payments';
 import { AppError } from '../lib/errors';
+import { walletService } from '../services/walletService';
 
 function verifyZaloMac(data: string, mac: string, key2: string): boolean {
   const calc = crypto.createHmac('sha256', key2).update(data).digest('hex');
@@ -78,7 +79,7 @@ const payments: FastifyPluginAsync = async (fastify) => {
       amount: transaction.amount,
       currency: transaction.currency,
       dealId: transaction.dealId,
-      dealStatus: transaction.deal.status,
+      dealStatus: transaction.deal?.status,
       createdAt: transaction.createdAt.toISOString(),
       updatedAt: transaction.updatedAt.toISOString(),
     };
@@ -107,13 +108,6 @@ const payments: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    if (deal.status !== 'created') {
-      throw new AppError(`Cannot create payment for deal with status: ${deal.status}`, {
-        code: 'BAD_REQUEST',
-        statusCode: 400,
-      });
-    }
-
     const amount = Number(body.amount || deal.amount);
 
     if (amount <= 0 || amount > deal.amount) {
@@ -130,16 +124,16 @@ const payments: FastifyPluginAsync = async (fastify) => {
       userId: body.userId,
       amount,
       currency: 'VND',
-      description: body.description || `Fund deal ${deal.id}`,
+      description: body.description || `Top up wallet for deal ${deal.id}`,
       callbackUrl: process.env.ZALOPAY_CALLBACK_URL,
-      metadata: { dealId: body.dealId },
+      metadata: { dealId: body.dealId, userId: body.userId, purpose: 'wallet_topup' },
     });
 
     await prisma.transaction.create({
       data: {
         dealId: body.dealId,
         userId: body.userId,
-        type: 'fund',
+        type: 'deposit',
         status: 'pending',
         amount,
         currency: 'VND',
@@ -152,12 +146,12 @@ const payments: FastifyPluginAsync = async (fastify) => {
     await writePaymentAuditLog({
       provider: 'zalopay',
       providerRef: result.providerRef,
-      eventType: 'create_payment',
+      eventType: 'create_wallet_topup',
       status: 'pending',
       dealId: body.dealId,
       amount,
       currency: 'VND',
-      message: 'ZaloPay payment created',
+      message: 'ZaloPay wallet top-up created',
       raw: result.raw,
     });
 
@@ -166,6 +160,7 @@ const payments: FastifyPluginAsync = async (fastify) => {
       providerRef: result.providerRef,
       checkoutUrl: result.checkoutUrl,
       status: result.status,
+      purpose: 'wallet_topup',
     };
   });
 
@@ -203,8 +198,9 @@ const payments: FastifyPluginAsync = async (fastify) => {
     const dealId = embedData.dealId;
     const providerRef = data.app_trans_id;
     const amount = Number(data.amount);
+    const userId = embedData.userId || data.app_user;
 
-    if (!dealId || !providerRef || !amount) {
+    if (!providerRef || !amount || !userId) {
       await writePaymentAuditLog({
         provider: 'zalopay',
         providerRef,
@@ -213,45 +209,13 @@ const payments: FastifyPluginAsync = async (fastify) => {
         dealId,
         amount,
         currency: 'VND',
-        message: 'missing required payment data',
+        message: 'missing required wallet top-up data',
         raw: data,
       });
-      return { return_code: 0, return_message: 'missing required payment data' };
+      return { return_code: 0, return_message: 'missing required wallet top-up data' };
     }
 
-    const deal = await prisma.deal.findUnique({ where: { id: dealId } });
-
-    if (!deal) {
-      await writePaymentAuditLog({
-        provider: 'zalopay',
-        providerRef,
-        eventType: 'callback',
-        status: 'failed',
-        dealId,
-        amount,
-        currency: 'VND',
-        message: 'deal not found',
-        raw: data,
-      });
-      return { return_code: 0, return_message: 'deal not found' };
-    }
-
-    if (amount > deal.amount) {
-      await writePaymentAuditLog({
-        provider: 'zalopay',
-        providerRef,
-        eventType: 'callback',
-        status: 'failed',
-        dealId,
-        amount,
-        currency: 'VND',
-        message: 'amount exceeds deal amount',
-        raw: data,
-      });
-      return { return_code: 0, return_message: 'amount exceeds deal amount' };
-    }
-
-    await prisma.$transaction(async (tx) => {
+    const completedTransaction = await prisma.$transaction(async (tx) => {
       const existingCompleted = await tx.transaction.findFirst({
         where: {
           provider: 'zalopay',
@@ -270,11 +234,11 @@ const payments: FastifyPluginAsync = async (fastify) => {
             dealId,
             amount,
             currency: 'VND',
-            message: 'duplicate completed callback ignored',
+            message: 'duplicate completed wallet top-up callback ignored',
             raw: data,
           },
         });
-        return;
+        return existingCompleted;
       }
 
       const pending = await tx.transaction.findFirst({
@@ -286,7 +250,7 @@ const payments: FastifyPluginAsync = async (fastify) => {
       });
 
       if (pending) {
-        await tx.transaction.update({
+        return tx.transaction.update({
           where: { id: pending.id },
           data: {
             status: 'completed',
@@ -294,43 +258,45 @@ const payments: FastifyPluginAsync = async (fastify) => {
             referenceNumber: `ZP-${data.zp_trans_id}`,
           },
         });
-      } else {
-        await tx.transaction.create({
-          data: {
-            dealId,
-            userId: data.app_user,
-            type: 'fund',
-            status: 'completed',
-            amount,
-            currency: 'VND',
-            provider: 'zalopay',
-            providerRef,
-            referenceNumber: `ZP-${data.zp_trans_id}`,
-          },
-        });
       }
 
-      await tx.deal.update({
-        where: { id: dealId },
+      return tx.transaction.create({
         data: {
-          status: 'funded',
-          fundedAmount: amount,
-        },
-      });
-
-      await tx.paymentAuditLog.create({
-        data: {
-          provider: 'zalopay',
-          providerRef,
-          eventType: 'callback',
-          status: 'success',
           dealId,
+          userId,
+          type: 'deposit',
+          status: 'completed',
           amount,
           currency: 'VND',
-          message: 'payment completed and deal funded',
-          raw: data,
+          provider: 'zalopay',
+          providerRef,
+          referenceNumber: `ZP-${data.zp_trans_id}`,
         },
       });
+    });
+
+    await walletService.deposit({
+      userId,
+      amount,
+      currency: 'VND',
+      provider: 'zalopay',
+      providerRef,
+      transactionId: completedTransaction.id,
+      idempotencyKey: `deposit:zalopay:${providerRef}`,
+      description: 'ZaloPay wallet top-up',
+      metadata: { dealId, raw: data },
+    });
+
+    await writePaymentAuditLog({
+      provider: 'zalopay',
+      providerRef,
+      eventType: 'callback',
+      status: 'success',
+      dealId,
+      amount,
+      currency: 'VND',
+      message: 'wallet top-up completed',
+      raw: data,
     });
 
     return { return_code: 1, return_message: 'success' };
