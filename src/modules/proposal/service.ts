@@ -2,6 +2,7 @@ import { proposalRepository } from './repository';
 import { CreateProposalInput } from './schemas';
 import { Proposal, ProposalFilter, ProposalListResult } from './types';
 import { AppError } from '../../lib/errors';
+import { notificationService } from '../../services/notificationService';
 
 export interface ProposalService {
   getProposals(filters?: ProposalFilter): Promise<ProposalListResult>;
@@ -20,6 +21,12 @@ export interface ProposalService {
   withdrawProposal(id: string, providerId: string): Promise<Proposal>;
   updateProposal(id: string, data: Partial<CreateProposalInput>): Promise<Proposal>;
   deleteProposal(id: string): Promise<void>;
+}
+
+function notifyBestEffort(task: Promise<any>) {
+  task.catch((error) => {
+    console.warn('Notification hook failed:', error?.message || error);
+  });
 }
 
 class ProposalServiceImpl implements ProposalService {
@@ -74,6 +81,15 @@ class ProposalServiceImpl implements ProposalService {
       clientId,
     });
 
+    notifyBestEffort(notificationService.notifyProposalReceived({
+      clientId: proposal.clientId,
+      providerId: proposal.providerId,
+      proposalId: proposal.id,
+      title: proposal.title,
+      requestId: proposal.requestId,
+      offerId: proposal.offerId,
+    }));
+
     return proposal;
   }
 
@@ -95,6 +111,12 @@ class ProposalServiceImpl implements ProposalService {
     }
 
     const updated = await proposalRepository.updateStatus(id, 'accepted');
+    notifyBestEffort(notificationService.notifyProposalAccepted({
+      clientId: updated.clientId,
+      providerId: updated.providerId,
+      proposalId: updated.id,
+      title: updated.title,
+    }));
     return updated;
   }
 
@@ -116,6 +138,12 @@ class ProposalServiceImpl implements ProposalService {
     }
 
     const updated = await proposalRepository.updateStatus(id, 'rejected');
+    notifyBestEffort(notificationService.notifyProposalRejected({
+      clientId: updated.clientId,
+      providerId: updated.providerId,
+      proposalId: updated.id,
+      title: updated.title,
+    }));
     return updated;
   }
 
@@ -137,6 +165,12 @@ class ProposalServiceImpl implements ProposalService {
     }
 
     const updated = await proposalRepository.updateStatus(id, 'withdrawn');
+    notifyBestEffort(notificationService.notifyProposalWithdrawn({
+      clientId: updated.clientId,
+      providerId: updated.providerId,
+      proposalId: updated.id,
+      title: updated.title,
+    }));
     return updated;
   }
 
