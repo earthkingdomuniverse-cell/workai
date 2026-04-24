@@ -1,7 +1,16 @@
+import { ENABLE_MOCK_MODE } from '../constants/config';
 import apiClient from './apiClient';
 import { generateMockDeals, generateMockDeal } from './mockData';
 
-const USE_MOCK_FALLBACK = true;
+interface ApiResponse<T> {
+  data: T;
+  meta?: Record<string, any>;
+}
+
+interface ListResponse<T> {
+  items: T[];
+  total?: number;
+}
 
 export interface Deal {
   id: string;
@@ -131,6 +140,10 @@ export interface CreateDisputeInput {
   attachments?: string[];
 }
 
+function shouldUseMockFallback(): boolean {
+  return ENABLE_MOCK_MODE;
+}
+
 export const dealService = {
   async getDeals(filters?: {
     providerId?: string;
@@ -152,10 +165,10 @@ export const dealService = {
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
       const query = params.toString();
-      const response = await apiClient.get(query ? `/deals?${query}` : '/deals');
-      return response.data?.items || [];
+      const response = await apiClient.get<ApiResponse<ListResponse<Deal>>>(query ? `/deals?${query}` : '/deals');
+      return response.data.items || [];
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('dealService.getDeals failed, using mock fallback');
         return generateMockDeals(filters?.limit || 10);
       }
@@ -165,10 +178,10 @@ export const dealService = {
 
   async getDeal(id: string): Promise<Deal> {
     try {
-      const response = await apiClient.get(`/deals/${id}`);
+      const response = await apiClient.get<ApiResponse<Deal>>(`/deals/${id}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`dealService.getDeal(${id}) failed, using mock fallback`);
         return generateMockDeal(id);
       }
@@ -177,37 +190,19 @@ export const dealService = {
   },
 
   async getMyDealsAsProvider(): Promise<Deal[]> {
-    try {
-      const response = await apiClient.get('/deals?providerId=me');
-      return response.data?.items || [];
-    } catch (error) {
-      if (USE_MOCK_FALLBACK) {
-        console.warn('dealService.getMyDealsAsProvider failed, using mock fallback');
-        return generateMockDeals(5);
-      }
-      throw error;
-    }
+    return this.getDeals({ providerId: 'me' });
   },
 
   async getDealsAsClient(): Promise<Deal[]> {
-    try {
-      const response = await apiClient.get('/deals?clientId=me');
-      return response.data?.items || [];
-    } catch (error) {
-      if (USE_MOCK_FALLBACK) {
-        console.warn('dealService.getDealsAsClient failed, using mock fallback');
-        return generateMockDeals(5);
-      }
-      throw error;
-    }
+    return this.getDeals({ clientId: 'me' });
   },
 
   async createDeal(data: CreateDealInput): Promise<Deal> {
     try {
-      const response = await apiClient.post('/deals', data);
+      const response = await apiClient.post<ApiResponse<Deal>>('/deals', data);
       return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn('dealService.createDeal failed, using mock fallback');
         return generateMockDeal('new-deal', data);
       }
@@ -217,10 +212,10 @@ export const dealService = {
 
   async fundDeal(id: string, data: FundDealInput): Promise<Deal> {
     try {
-      const response = await apiClient.post(`/deals/${id}/fund`, data);
+      const response = await apiClient.post<ApiResponse<Deal>>(`/deals/${id}/fund`, data);
       return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`dealService.fundDeal(${id}) failed, using mock fallback`);
         const deal = generateMockDeal(id);
         deal.status = 'funded';
@@ -233,10 +228,10 @@ export const dealService = {
 
   async submitWork(id: string, data: SubmitWorkInput): Promise<Deal> {
     try {
-      const response = await apiClient.post(`/deals/${id}/submit`, data);
+      const response = await apiClient.post<ApiResponse<Deal>>(`/deals/${id}/submit`, data);
       return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`dealService.submitWork(${id}) failed, using mock fallback`);
         const deal = generateMockDeal(id);
         deal.status = 'submitted';
@@ -248,10 +243,10 @@ export const dealService = {
 
   async releaseFunds(id: string, data: ReleaseFundsInput): Promise<Deal> {
     try {
-      const response = await apiClient.post(`/deals/${id}/release`, data);
+      const response = await apiClient.post<ApiResponse<Deal>>(`/deals/${id}/release`, data);
       return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`dealService.releaseFunds(${id}) failed, using mock fallback`);
         const deal = generateMockDeal(id);
         deal.status = 'released';
@@ -264,10 +259,10 @@ export const dealService = {
 
   async createDispute(id: string, data: CreateDisputeInput): Promise<Deal> {
     try {
-      const response = await apiClient.post(`/deals/${id}/dispute`, data);
+      const response = await apiClient.post<ApiResponse<Deal>>(`/deals/${id}/dispute`, data);
       return response.data;
     } catch (error) {
-      if (USE_MOCK_FALLBACK) {
+      if (shouldUseMockFallback()) {
         console.warn(`dealService.createDispute(${id}) failed, using mock fallback`);
         const deal = generateMockDeal(id);
         deal.status = 'disputed';
