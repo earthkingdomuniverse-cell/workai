@@ -130,7 +130,7 @@ class AdminServiceImpl implements AdminService {
 
   async getPendingReviews(): Promise<ReviewModeration[]> {
     return mockReviews
-      .filter((item) => item.status === 'pending')
+      .filter((item) => item.status === 'pending' || item.status === 'flagged')
       .map((item) => ({
         id: `moderation_${item.id}`,
         reviewId: item.id,
@@ -138,8 +138,8 @@ class AdminServiceImpl implements AdminService {
         subjectId: item.subjectId,
         content: item.comment,
         rating: item.rating,
-        status: 'pending',
-        flags: [],
+        status: item.status === 'flagged' ? 'flagged' : 'pending',
+        flags: item.status === 'flagged' ? ['operator_flagged'] : [],
         createdAt: item.createdAt,
       }));
   }
@@ -205,11 +205,24 @@ class AdminServiceImpl implements AdminService {
   ): Promise<Record<string, any>> {
     const review = mockReviews.find((item) => item.id === reviewId);
     if (!review) throw new Error('Review not found');
-    review.status =
-      action === 'approve_release' ? 'approved' : action === 'refund_client' ? 'refunded' : 'held';
+
+    const normalizedAction = action === 'approve_release' ? 'approve'
+      : action === 'refund_client' ? 'reject'
+      : action;
+
+    if (!['approve', 'reject', 'hold'].includes(normalizedAction)) {
+      throw new Error(`Unsupported review action: ${action}`);
+    }
+
+    review.status = normalizedAction === 'approve'
+      ? 'approved'
+      : normalizedAction === 'reject'
+        ? 'rejected'
+        : 'held';
+
     return {
       reviewId,
-      action,
+      action: normalizedAction,
       note,
       status: review.status,
       processedBy: performedBy,
