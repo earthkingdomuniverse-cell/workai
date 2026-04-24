@@ -34,6 +34,9 @@
   "exclude": [
     "node_modules",
     "dist",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/__tests__/**",
     "src/components",
     "src/theme",
     "src/modules",
