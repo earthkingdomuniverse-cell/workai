@@ -8,6 +8,10 @@ import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
 import { adminService } from '../../src/services/adminService';
 
+function getModerationReviewId(item: any) {
+  return item.reviewId || item.id;
+}
+
 export default function AdminReviewsScreen() {
   const { isOperator } = useAuth();
   const [items, setItems] = useState<any[]>([]);
@@ -83,41 +87,44 @@ export default function AdminReviewsScreen() {
       {items.length === 0 ? (
         <EmptyState title="No pending reviews" description="Operator review queue is currently empty." icon="⭐" />
       ) : (
-        items.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <Text style={styles.cardTitle}>Review {item.id}</Text>
-            <Text style={styles.cardText}>Deal: {item.dealId || 'unknown'}</Text>
-            <Text style={styles.cardText}>Reviewer: {item.reviewerId || item.reviewer?.id || 'unknown'}</Text>
-            <Text style={styles.cardText}>Subject: {item.subjectId || item.subject?.id || 'unknown'}</Text>
-            <Text style={styles.cardText}>Rating: {item.rating}/5</Text>
-            <Text style={styles.cardText}>Status: {item.status || 'pending'}</Text>
-            <Text style={styles.comment}>{item.comment || 'No comment provided.'}</Text>
+        items.map((item) => {
+          const reviewId = getModerationReviewId(item);
+          return (
+            <View key={item.id} style={styles.card}>
+              <Text style={styles.cardTitle}>Review {reviewId}</Text>
+              <Text style={styles.cardText}>Deal: {item.dealId || 'unknown'}</Text>
+              <Text style={styles.cardText}>Reviewer: {item.reviewerId || item.reviewer?.id || 'unknown'}</Text>
+              <Text style={styles.cardText}>Subject: {item.subjectId || item.subject?.id || 'unknown'}</Text>
+              <Text style={styles.cardText}>Rating: {item.rating}/5</Text>
+              <Text style={styles.cardText}>Status: {item.status || 'pending'}</Text>
+              <Text style={styles.comment}>{item.comment || item.content || 'No comment provided.'}</Text>
 
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.approveButton]}
-                disabled={processingId === item.id}
-                onPress={() => processReview(item.id, 'approve')}
-              >
-                <Text style={styles.buttonText}>Approve</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.rejectButton]}
-                disabled={processingId === item.id}
-                onPress={() => processReview(item.id, 'reject')}
-              >
-                <Text style={styles.buttonText}>Reject</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.flagButton]}
-                disabled={processingId === item.id}
-                onPress={() => flagReview(item.id)}
-              >
-                <Text style={styles.buttonText}>Flag</Text>
-              </TouchableOpacity>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={[styles.button, styles.approveButton]}
+                  disabled={processingId === reviewId}
+                  onPress={() => processReview(reviewId, 'approve')}
+                >
+                  <Text style={styles.buttonText}>Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.rejectButton]}
+                  disabled={processingId === reviewId}
+                  onPress={() => processReview(reviewId, 'reject')}
+                >
+                  <Text style={styles.buttonText}>Reject</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.flagButton]}
+                  disabled={processingId === reviewId}
+                  onPress={() => flagReview(reviewId)}
+                >
+                  <Text style={styles.buttonText}>Flag</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        ))
+          );
+        })
       )}
     </ScrollView>
   );
