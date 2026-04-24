@@ -19,7 +19,7 @@ export default function IntroScreen() {
         <Text style={styles.icon}>🚀</Text>
 
         <PageTitle
-          title="Welcome to SkillValue AI"
+          title="Welcome to WorkAI"
           subtitle="Let's set up your profile to get started"
           size="lg"
         />
