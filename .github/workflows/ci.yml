@@ -24,7 +24,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Generate Prisma client
         run: npx prisma generate
@@ -68,7 +68,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Generate Prisma client
         run: npx prisma generate
@@ -96,7 +96,7 @@ jobs:
 
       - name: Install mobile dependencies
         working-directory: mobile
-        run: npm ci
+        run: npm install
 
       - name: Typecheck mobile
         working-directory: mobile
