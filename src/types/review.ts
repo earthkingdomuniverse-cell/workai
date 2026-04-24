@@ -2,6 +2,16 @@ import { Timestamps } from './common';
 
 export type ReviewerRole = 'client' | 'provider';
 
+export type ReviewStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'flagged'
+  | 'removed'
+  | 'refunded'
+  | 'held'
+  | 'processed';
+
 export interface Review extends Timestamps {
   id: string;
   dealId: string;
@@ -14,7 +24,7 @@ export interface Review extends Timestamps {
   tags: string[];
   helpfulCount: number;
   reported: boolean;
-  status?: 'pending' | 'approved' | 'flagged' | 'removed' | 'refunded' | 'held' | 'processed';
+  status?: ReviewStatus;
   reviewer?: {
     id: string;
     displayName: string;
