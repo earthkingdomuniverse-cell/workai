@@ -15,6 +15,16 @@ async function requireDealUser(request: any, reply: any) {
   return user;
 }
 
+async function resolveUserScopedDealFilters(request: any, reply: any, query: Record<string, string | undefined>) {
+  const usesMeFilter = query.providerId === 'me' || query.clientId === 'me';
+  const user = usesMeFilter ? await requireDealUser(request, reply) : null;
+
+  return {
+    providerId: query.providerId === 'me' ? user?.userId : query.providerId,
+    clientId: query.clientId === 'me' ? user?.userId : query.clientId,
+  };
+}
+
 function ensureTransition(current: string, next: DealStatus, allowed: DealStatus[]) {
   if (!allowed.includes(current as DealStatus)) {
     throw new AppError(`Cannot transition deal from ${current} to ${next}`, {
@@ -54,11 +64,12 @@ const includeDealRelations = {
 const deals: FastifyPluginAsync = async (fastify) => {
   fastify.get('/deals', async (request, reply) => {
     const query = request.query as Record<string, string | undefined>;
+    const scopedFilters = await resolveUserScopedDealFilters(request, reply, query);
     const where: any = {};
 
     if (query.status) where.status = query.status;
-    if (query.providerId) where.providerId = query.providerId;
-    if (query.clientId) where.clientId = query.clientId;
+    if (scopedFilters.providerId) where.providerId = scopedFilters.providerId;
+    if (scopedFilters.clientId) where.clientId = scopedFilters.clientId;
 
     const items = await prisma.deal.findMany({
       where,
