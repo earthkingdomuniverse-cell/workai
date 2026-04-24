@@ -28,13 +28,21 @@ export class ApiClient {
       },
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Request failed');
+    let data: any = null;
+    const text = await response.text();
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { error: { message: text } };
+      }
     }
 
-    return data;
+    if (!response.ok) {
+      throw new Error(data?.error?.message || 'Request failed');
+    }
+
+    return data as T;
   }
 
   async get<T>(endpoint: string): Promise<T> {
@@ -68,3 +76,4 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_URL);
+export default apiClient;
