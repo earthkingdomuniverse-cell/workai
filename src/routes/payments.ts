@@ -191,7 +191,7 @@ const payments: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  fastify.post('/payments/zalopay/callback', async (request, reply) => {
+  fastify.post('/payments/zalopay/callback', async (request, _reply) => {
     const body = request.body as any;
     const key2 = process.env.ZALOPAY_KEY2;
 
