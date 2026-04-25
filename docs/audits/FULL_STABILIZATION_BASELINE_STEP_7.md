@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Record the first CI-confirmed baseline where backend, Prisma migrations, backend tests, and mobile TypeScript checks all pass together.
+Record the first CI-confirmed baseline where backend, Prisma migrations, backend tests, mobile TypeScript checks, and backend HTTP smoke checks all pass.
 
-This document should be used as the reference point before additional runtime, product, or production hardening work.
+This document should be used as the reference point before additional product, deployment, or production hardening work.
 
 ---
 
-## Verified workflow run
+## Verified workflow runs
 
-Manual Runtime Verification:
+### Manual Runtime Verification
 
 ```text
 https://github.com/earthkingdomuniverse-cell/workai/actions/runs/24919469620
@@ -22,11 +22,21 @@ Run result:
 - Prisma migration verification: `success`
 - Mobile static verification: `success`
 
+### Manual Backend Runtime Smoke
+
+```text
+https://github.com/earthkingdomuniverse-cell/workai/actions/runs/24919725752
+```
+
+Run result:
+
+- Backend HTTP smoke verification: `success`
+
 ---
 
 ## Backend verification
 
-The backend job completed successfully with these checks:
+The backend verification job completed successfully with these checks:
 
 ```bash
 npm install
@@ -44,6 +54,39 @@ Validated status:
 - backend production build passes.
 - backend Vitest test suite passes.
 - auth contract tests are included in CI through `npm test`.
+
+---
+
+## Backend runtime smoke verification
+
+The backend HTTP smoke job completed successfully with PostgreSQL 16 and the compiled backend server.
+
+Executed checks:
+
+```bash
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+node dist/server.js
+```
+
+Validated HTTP routes:
+
+```text
+GET /health
+GET /api/v1/notifications
+GET /api/v1/deals
+GET /api/v1/withdraw
+GET /api/v1/admin/overview
+```
+
+Validated status:
+
+- compiled backend server starts successfully with `node dist/server.js`.
+- `/health` responds successfully with `status: ok`.
+- protected routes reject missing-token requests with `401 AUTHENTICATION_ERROR`.
+- runtime route registration works for the smoke-tested API surface.
 
 ---
 
@@ -99,6 +142,9 @@ Validated status:
 - Fixed payment callback unused parameter under strict TypeScript settings.
 - Added backend tests to CI.
 - Excluded backend test files from production TypeScript build output.
+- Added manual backend HTTP smoke workflow.
+- Confirmed compiled backend server starts in CI.
+- Confirmed core protected routes reject missing-token requests consistently.
 
 ### Prisma
 
@@ -135,10 +181,11 @@ Validated status:
 
 ## Current baseline pass criteria
 
-This baseline is considered valid when this workflow remains green:
+This baseline is considered valid when these workflows remain green:
 
 ```text
 Manual Runtime Verification
+Manual Backend Runtime Smoke
 ```
 
 Required passing jobs:
@@ -146,8 +193,9 @@ Required passing jobs:
 - `Backend runtime verification`
 - `Prisma migration verification`
 - `Mobile static verification`
+- `Backend HTTP smoke verification`
 
-Required successful commands:
+Required successful commands and runtime checks:
 
 ```bash
 npm run typecheck
@@ -156,25 +204,36 @@ npm test
 npx prisma migrate deploy
 npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
 cd mobile && npx tsc --noEmit
+node dist/server.js
+curl http://127.0.0.1:3000/health
+```
+
+Protected route smoke expectations:
+
+```text
+/api/v1/notifications -> 401 AUTHENTICATION_ERROR without token
+/api/v1/deals -> 401 AUTHENTICATION_ERROR without token
+/api/v1/withdraw -> 401 AUTHENTICATION_ERROR without token
+/api/v1/admin/overview -> 401 AUTHENTICATION_ERROR without token
 ```
 
 ---
 
 ## Known limitations after this baseline
 
-This baseline confirms compile/test/migration health. It does not yet prove full runtime product behavior.
+This baseline confirms compile, test, migration, backend startup, health check, and selected protected-route authentication behavior.
 
 Remaining recommended verification:
 
-1. Start backend server and smoke-test core HTTP routes.
-2. Start Expo mobile app and verify navigation/runtime rendering.
-3. Add backend integration tests for wallet, payment, deal, and review happy paths.
-4. Add mobile screen-level smoke tests or Expo preview checks.
-5. Review mobile npm audit warnings separately; current CI does not fail on moderate/high audit findings.
-6. Add deployment environment checks for required secrets and callback URLs.
+1. Start Expo mobile app and verify navigation/runtime rendering.
+2. Add backend integration tests for wallet, payment, deal, and review happy paths.
+3. Add mobile screen-level smoke tests or Expo preview checks.
+4. Review mobile npm audit warnings separately; current CI does not fail on moderate/high audit findings.
+5. Add deployment environment checks for required secrets and callback URLs.
+6. Expand backend HTTP smoke coverage to include authenticated happy paths with seeded users and test JWTs.
 
 ---
 
 ## Next recommended step
 
-Create a runtime smoke test plan that starts the backend, hits representative endpoints, and verifies mobile Expo boot/runtime behavior separately from static TypeScript checks.
+Create an authenticated runtime smoke plan that seeds minimal test data, generates member/operator/admin tokens, and verifies wallet, deal, review, and admin happy paths.
