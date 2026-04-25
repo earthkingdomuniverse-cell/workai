@@ -2,17 +2,19 @@ import React from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../theme';
 
-type TextFieldProps = TextInputProps & {
+type TextFieldProps = Omit<TextInputProps, 'onChange'> & {
   label?: string;
   error?: string;
+  onChange?: (value: string) => void;
 };
 
-export function TextField({ label, error, style, ...props }: TextFieldProps) {
+export function TextField({ label, error, style, onChange, onChangeText, ...props }: TextFieldProps) {
   return (
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         {...props}
+        onChangeText={onChangeText || onChange}
         style={[styles.input, style]}
         placeholderTextColor={colors.textSecondary}
       />
