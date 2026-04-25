@@ -9,7 +9,6 @@ export default function DealPaymentScreen() {
   const [dealTitle, setDealTitle] = useState('');
   const [dealStatus, setDealStatus] = useState('');
   const [paymentAmount, setPaymentAmount] = useState(amount as string || '');
-  const [paymentMethod, setPaymentMethod] = useState('card');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
@@ -33,7 +32,7 @@ export default function DealPaymentScreen() {
     };
 
     loadDeal();
-  }, [dealId]);
+  }, [dealId, paymentAmount]);
 
   const formatAmount = (value: string) => {
     const num = parseFloat(value);
@@ -56,9 +55,7 @@ export default function DealPaymentScreen() {
     Alert.alert(
       'Payment Processing',
       `Processing payment of ${formatAmount(paymentAmount)} for deal ${dealId}`,
-      [
-        { text: 'OK', onPress: () => handlePaymentSubmit() }
-      ]
+      [{ text: 'OK', onPress: () => handlePaymentSubmit() }],
     );
   };
 
@@ -88,7 +85,7 @@ export default function DealPaymentScreen() {
 
       <View style={styles.amountSection}>
         <Text style={styles.amountLabel}>Amount to Pay</Text>
-        <Text style={styles.amountValue}>{formatAmount(amount as string)}</Text>
+        <Text style={styles.amountValue}>{formatAmount(paymentAmount || amount as string)}</Text>
       </View>
 
       <View style={styles.form}>
@@ -135,12 +132,12 @@ export default function DealPaymentScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.payButton} onPress={handlePayment}>
+        <TouchableOpacity style={styles.payButton} onPress={handlePayment} disabled={processing}>
           {processing ? <ActivityIndicator color={colors.white} /> : <Text style={styles.payButtonText}>Process Payment</Text>}
         </TouchableOpacity>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
