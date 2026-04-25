@@ -1,11 +1,8 @@
 import React from 'react';
 import { TextField } from './TextField';
-import type { TextInputProps } from 'react-native';
+import type { TextFieldProps } from './TextField';
 
-type MultilineFieldProps = TextInputProps & {
-  label?: string;
-  error?: string;
-};
+type MultilineFieldProps = TextFieldProps;
 
 export function MultilineField(props: MultilineFieldProps) {
   return <TextField {...props} multiline textAlignVertical="top" />;
