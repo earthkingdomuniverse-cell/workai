@@ -16,6 +16,29 @@ mobile/app/offers/[id].tsx
 
 ---
 
+## Kết quả hiện tại
+
+Màn **Offer Detail** đã hoàn tất phần backend contract và runtime smoke.
+
+Các workflow đã pass:
+
+```text
+Manual Runtime Verification: https://github.com/earthkingdomuniverse-cell/workai/actions/runs/24920351734
+Manual Backend Runtime Smoke: https://github.com/earthkingdomuniverse-cell/workai/actions/runs/24920459840
+```
+
+Kết quả xác minh:
+
+- Backend typecheck/build/test: `success`
+- Prisma migration/diff: `success`
+- Mobile TypeScript: `success`
+- Backend runtime start: `success`
+- `GET /health`: `success`
+- `GET /api/v1/offers/:id` provider contract smoke: `success`
+- Protected routes thiếu token -> `401 AUTHENTICATION_ERROR`: `success`
+
+---
+
 ## Mobile contract hiện tại
 
 Màn Offer Detail đang cần dữ liệu từ các service:
@@ -137,6 +160,50 @@ Thay đổi chính:
 
 ---
 
+## Runtime smoke đã thêm
+
+File:
+
+```text
+.github/workflows/manual-runtime-smoke.yml
+```
+
+Commit:
+
+```text
+ef7ae9fc841e0a709e9c3b69801163d25542afe3
+```
+
+Workflow seed dữ liệu:
+
+```text
+SMOKE_PROVIDER_ID=11111111-1111-4111-8111-111111111111
+SMOKE_OFFER_ID=22222222-2222-4222-8222-222222222222
+provider email=provider-smoke@example.com
+provider trustScore=87
+offer title=Smoke Test Offer Detail
+```
+
+Sau đó kiểm tra:
+
+```text
+GET /api/v1/offers/:id -> 200
+```
+
+Assert các field:
+
+```text
+data.id
+data.providerId
+data.title
+data.provider.id
+data.provider.email
+data.provider.displayName
+data.provider.trustScore
+```
+
+---
+
 ## Response contract kỳ vọng cho `GET /api/v1/offers/:id`
 
 ```json
@@ -174,17 +241,21 @@ Thay đổi chính:
 
 ## Điều kiện pass cho màn Offer Detail
 
-- `GET /api/v1/offers/:id` trả provider summary.
-- Nếu provider trust API lỗi hoặc không có dữ liệu, màn vẫn hiển thị fallback provider từ offer.
-- Nếu reviews API lỗi, màn vẫn hiển thị offer detail và chỉ báo lỗi phần reviews.
-- Mobile TypeScript vẫn pass.
-- Backend typecheck/build/test vẫn pass.
-- Runtime smoke nên được mở rộng để seed một offer và kiểm tra `GET /api/v1/offers/:id`.
+- `GET /api/v1/offers/:id` trả provider summary. Đã pass.
+- Nếu provider trust API lỗi hoặc không có dữ liệu, màn vẫn hiển thị fallback provider từ offer. Đã có fallback.
+- Nếu reviews API lỗi, màn vẫn hiển thị offer detail và chỉ báo lỗi phần reviews. Đã có fallback.
+- Mobile TypeScript vẫn pass. Đã pass ở run `24920351734`.
+- Backend typecheck/build/test vẫn pass. Đã pass ở run `24920351734`.
+- Runtime smoke seed offer và kiểm tra `GET /api/v1/offers/:id`. Đã pass ở run `24920459840`.
 
 ---
 
-## Việc cần làm tiếp theo
+## Kết luận
 
-1. Chạy Manual Runtime Verification để xác nhận backend/mobile vẫn xanh.
-2. Mở rộng Manual Backend Runtime Smoke để seed provider + offer rồi test `GET /api/v1/offers/:id`.
-3. Nếu smoke pass, chuyển sang màn tiếp theo: `Create Deal from Offer`.
+Màn **Offer Detail** đủ điều kiện chuyển sang màn tiếp theo.
+
+Màn tiếp theo:
+
+```text
+Create Deal from Offer
+```
