@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ProgressBar } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 import { SkillTagList, Skill } from './SkillTagList';
 
@@ -30,16 +30,15 @@ export function ValueProfileCard({
   completionPercentage,
   completed,
   onSkillPress,
-  onGoalPress,
   showProgress = true,
   compact = false,
 }: ValueProfileCardProps) {
   const activeGoals = goals.filter((g) => g.status === 'active');
   const completedGoals = goals.filter((g) => g.status === 'completed');
+  const progress = Math.max(0, Math.min(completionPercentage, 100));
 
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Value Profile</Text>
         <View style={[styles.roleBadge, getRoleBadgeStyle(role)]}>
@@ -47,23 +46,19 @@ export function ValueProfileCard({
         </View>
       </View>
 
-      {/* Progress Bar */}
       {showProgress && (
         <View style={styles.progressContainer}>
           <View style={styles.progressHeader}>
             <Text style={styles.progressLabel}>Profile Completion</Text>
-            <Text style={styles.progressValue}>{completionPercentage}%</Text>
+            <Text style={styles.progressValue}>{progress}%</Text>
           </View>
-          <ProgressBar
-            progress={completionPercentage / 100}
-            color={theme.colors.primary[500]}
-            style={styles.progressBar}
-          />
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+          </View>
           {completed && <Text style={styles.completedText}>✓ Profile Complete</Text>}
         </View>
       )}
 
-      {/* Skills Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Skills</Text>
@@ -72,7 +67,6 @@ export function ValueProfileCard({
         <SkillTagList skills={skills} onSkillPress={onSkillPress} compact={compact} />
       </View>
 
-      {/* Goals Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Goals</Text>
@@ -83,16 +77,8 @@ export function ValueProfileCard({
         {goals.length > 0 ? (
           <View style={styles.goalsList}>
             {goals.slice(0, compact ? 3 : undefined).map((goal) => (
-              <View
-                key={goal.id}
-                style={[styles.goalItem, goal.status === 'completed' && styles.goalItemCompleted]}
-              >
-                <Text
-                  style={[
-                    styles.goalTitle,
-                    goal.status === 'completed' && styles.goalTitleCompleted,
-                  ]}
-                >
+              <View key={goal.id} style={[styles.goalItem, goal.status === 'completed' && styles.goalItemCompleted]}>
+                <Text style={[styles.goalTitle, goal.status === 'completed' && styles.goalTitleCompleted]}>
                   {goal.status === 'completed' ? '✓ ' : ''}
                   {goal.title}
                 </Text>
@@ -113,25 +99,19 @@ export function ValueProfileCard({
 }
 
 function getRoleBadgeStyle(role: string) {
-  const styleMap: any = {
-    member: { backgroundColor: theme.colors.primary[900], borderColor: theme.colors.primary[700] },
-    operator: {
-      backgroundColor: theme.colors.secondary[900],
-      borderColor: theme.colors.secondary[700],
-    },
-    admin: {
-      backgroundColor: theme.colors.error.main + '20',
-      borderColor: theme.colors.error.main,
-    },
+  const styleMap: Record<string, any> = {
+    member: { backgroundColor: theme.colors.primaryDark, borderColor: theme.colors.primary },
+    operator: { backgroundColor: theme.colors.secondary, borderColor: theme.colors.secondary },
+    admin: { backgroundColor: theme.colors.error + '20', borderColor: theme.colors.error },
   };
   return styleMap[role] || styleMap.member;
 }
 
 function getRoleTextStyle(role: string) {
-  const colorMap: any = {
-    member: { color: theme.colors.primary[300] },
-    operator: { color: theme.colors.secondary[300] },
-    admin: { color: theme.colors.error.light },
+  const colorMap: Record<string, any> = {
+    member: { color: theme.colors.primaryLight },
+    operator: { color: theme.colors.white },
+    admin: { color: theme.colors.error },
   };
   return colorMap[role] || colorMap.member;
 }
@@ -185,16 +165,22 @@ const styles = StyleSheet.create({
   progressValue: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.primary[400],
+    color: theme.colors.primary,
   },
-  progressBar: {
+  progressTrack: {
     height: 8,
     borderRadius: 4,
     backgroundColor: theme.colors.background.tertiary,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.primary,
   },
   completedText: {
     fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.success.main,
+    color: theme.colors.success,
     marginTop: theme.spacing.xs,
   },
   section: {
