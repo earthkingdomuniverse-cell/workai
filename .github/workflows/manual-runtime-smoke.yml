@@ -1,0 +1,111 @@
+name: Manual Backend Runtime Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backend-smoke:
+    name: Backend HTTP smoke verification
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: workai
+          POSTGRES_PASSWORD: workai
+          POSTGRES_DB: workai_smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      HOST: 0.0.0.0
+      LOG_LEVEL: error
+      API_PREFIX: /api
+      API_VERSION: v1
+      CORS_ORIGIN: '*'
+      ENABLE_MOCK_MODE: 'true'
+      ENABLE_ADMIN_TAB: 'true'
+      ENABLE_SWAGGER: 'false'
+      DATABASE_URL: postgresql://workai:workai@localhost:5432/workai_smoke?schema=public
+      JWT_SECRET: smoke-test-secret
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Start backend
+        run: |
+          node dist/server.js > backend-smoke.log 2>&1 &
+          echo $! > backend-smoke.pid
+
+      - name: Wait for health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/health > /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Backend did not become healthy'
+          cat backend-smoke.log || true
+          exit 1
+
+      - name: Verify health response
+        run: |
+          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('/tmp/health.json','utf8')); if(data.status !== 'ok') { console.error(data); process.exit(1); }"
+
+      - name: Smoke protected routes require authentication
+        run: |
+          check_unauthenticated() {
+            path="$1"
+            status=$(curl -sS -o /tmp/smoke-response.json -w '%{http_code}' "http://127.0.0.1:3000${path}")
+            cat /tmp/smoke-response.json
+            if [ "$status" != "401" ]; then
+              echo "Expected 401 for ${path}, got ${status}"
+              exit 1
+            fi
+            node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('/tmp/smoke-response.json','utf8')); if(!data.error || data.error.code !== 'AUTHENTICATION_ERROR') { console.error(data); process.exit(1); }"
+          }
+
+          check_unauthenticated /api/v1/notifications
+          check_unauthenticated /api/v1/deals
+          check_unauthenticated /api/v1/withdraw
+          check_unauthenticated /api/v1/admin/overview
+
+      - name: Print backend logs on failure
+        if: failure()
+        run: cat backend-smoke.log || true
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend-smoke.pid ]; then
+            kill $(cat backend-smoke.pid) || true
+          fi
