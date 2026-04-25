@@ -1,21 +1,29 @@
-import React, { useEffect, Component } from 'react';
+import React, { useEffect, Component, ReactNode } from 'react';
 import { ActivityIndicator, View, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { theme } from '../theme';
 import { useAuthStore } from '../src/store/auth-store';
 
-// Error Boundary Component
-class ErrorBoundary extends Component {
-  constructor(props) {
+type ErrorBoundaryProps = {
+  children?: ReactNode;
+};
+
+type ErrorBoundaryState = {
+  hasError: boolean;
+  error: unknown;
+};
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: unknown, errorInfo: unknown) {
     console.error('Error caught by boundary:', error, errorInfo);
   }
 
@@ -63,7 +71,7 @@ export default function RootLayout() {
           justifyContent: 'center',
         }}
       >
-        <ActivityIndicator color={theme.colors.primary[500]} size="large" />
+        <ActivityIndicator color={theme.colors.primary} size="large" />
       </View>
     );
   }
