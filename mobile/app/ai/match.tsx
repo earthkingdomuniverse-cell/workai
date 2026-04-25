@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,12 +13,15 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { EmptyState } from '../../components/EmptyState';
 import { aiService, AiMatchInput, AiRecommendation } from '../../src/services/aiService';
 
+type Urgency = 'low' | 'medium' | 'high';
+const urgencyOptions: Urgency[] = ['low', 'medium', 'high'];
+
 export default function AiMatchScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [skills, setSkills] = useState('');
   const [budget, setBudget] = useState('');
-  const [urgency, setUrgency] = useState<'low' | 'medium' | 'high'>('medium');
+  const [urgency, setUrgency] = useState<Urgency>('medium');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<AiRecommendation[]>([]);
@@ -28,12 +30,10 @@ export default function AiMatchScreen() {
     if (!value.trim()) return undefined;
     const num = parseFloat(value);
     if (isNaN(num)) return undefined;
-    // Support "1000-5000" or just "5000" format
     if (value.includes('-')) {
       const [min, max] = value.split('-').map((v) => parseFloat(v.trim()));
       return { min: isNaN(min) ? undefined : min, max: isNaN(max) ? undefined : max };
     }
-    // Single value - treat as both min and max
     return { min: num, max: num };
   };
 
@@ -100,7 +100,7 @@ export default function AiMatchScreen() {
       />
 
       <View style={styles.urgencyRow}>
-        {['low', 'medium', 'high'].map((item) => (
+        {urgencyOptions.map((item) => (
           <TouchableOpacity
             key={item}
             style={[styles.urgencyChip, urgency === item && styles.urgencyChipActive]}
