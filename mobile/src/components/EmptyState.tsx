@@ -1,13 +1,32 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../theme';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, radius, spacing, typography } from '../theme';
 
-export function EmptyState({ title = 'No items', description, icon }: { title?: string; description?: string; icon?: string }) {
+type EmptyStateProps = {
+  title?: string;
+  description?: string;
+  icon?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+};
+
+export function EmptyState({
+  title = 'No items',
+  description,
+  icon,
+  actionLabel,
+  onAction,
+}: EmptyStateProps) {
   return (
     <View style={styles.container}>
       {icon ? <Text style={styles.icon}>{icon}</Text> : null}
       <Text style={styles.title}>{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}
+      {actionLabel && onAction ? (
+        <TouchableOpacity style={styles.button} onPress={onAction}>
+          <Text style={styles.buttonText}>{actionLabel}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -33,5 +52,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  button: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  buttonText: {
+    ...typography.button,
+    color: colors.white,
   },
 });
