@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, radius, typography } from '../../src/theme';
+import { colors, spacing, radius, typography } from '../theme';
 
 interface Receipt {
   id: string;
@@ -31,7 +31,7 @@ interface ReceiptCardProps {
   onPress?: () => void;
 }
 
-export const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt }) => {
+export const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt, onPress }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -61,18 +61,16 @@ export const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt }) => {
   const formatAmount = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency,
+      currency,
       maximumFractionDigits: 2,
     }).format(amount);
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} disabled={!onPress}>
       <View style={styles.header}>
         <Text style={styles.receiptNumber}>Receipt #{receipt.receiptNumber}</Text>
-        <View
-          style={[styles.statusBadge, { backgroundColor: getStatusColor(receipt.status) + '15' }]}
-        >
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(receipt.status) + '15' }]}> 
           <Text style={[styles.statusText, { color: getStatusColor(receipt.status) }]}>
             {getStatusLabel(receipt.status)}
           </Text>
