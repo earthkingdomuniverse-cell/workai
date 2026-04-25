@@ -42,16 +42,16 @@ export interface Deal {
     displayName: string;
     avatarUrl?: string;
     trustScore: number;
-    completedDeals: number;
-    averageRating: number;
+    completedDeals?: number;
+    averageRating?: number;
   };
   client?: {
     id: string;
     displayName: string;
     avatarUrl?: string;
     trustScore: number;
-    completedDeals: number;
-    averageRating: number;
+    completedDeals?: number;
+    averageRating?: number;
   };
   request?: {
     id: string;
@@ -62,6 +62,8 @@ export interface Deal {
     id: string;
     title: string;
     description: string;
+    price?: number;
+    currency?: string;
   };
   proposal?: {
     id: string;
@@ -74,7 +76,7 @@ export interface Deal {
     resolution?: string;
     createdAt: string;
   };
-  timeline: DealTimelineEvent[];
+  timeline?: DealTimelineEvent[];
   createdAt: string;
   updatedAt: string;
 }
@@ -108,9 +110,11 @@ export interface CreateDealInput {
   offerId?: string;
   requestId?: string;
   proposalId?: string;
-  title: string;
-  description: string;
-  amount: number;
+  providerId?: string;
+  clientId?: string;
+  title?: string;
+  description?: string;
+  amount?: number;
   currency?: string;
   milestones?: DealMilestone[];
   attachments?: string[];
@@ -123,7 +127,7 @@ export interface FundDealInput {
 }
 
 export interface SubmitWorkInput {
-  milestoneId: string;
+  milestoneId?: string;
   attachments?: string[];
   notes?: string;
 }
