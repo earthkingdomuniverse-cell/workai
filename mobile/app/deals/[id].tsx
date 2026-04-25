@@ -23,6 +23,8 @@ export default function DealDetailScreen() {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const loadDeal = async () => {
+    if (!id) return;
+
     try {
       setError(null);
       const data = await dealService.getDeal(id);
@@ -107,6 +109,7 @@ export default function DealDetailScreen() {
     return <ErrorState message={error || 'Deal not found'} onRetry={loadDeal} />;
   }
 
+  const timeline = deal.timeline || [];
   const badgeColor =
     deal.status === 'released'
       ? colors.success
@@ -135,10 +138,31 @@ export default function DealDetailScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Deal Information</Text>
-        <View style={styles.infoRow}><Text style={styles.label}>Amount</Text><Text style={styles.value}>${deal.amount}</Text></View>
-        <View style={styles.infoRow}><Text style={styles.label}>Funded</Text><Text style={styles.value}>${deal.fundedAmount}</Text></View>
-        <View style={styles.infoRow}><Text style={styles.label}>Released</Text><Text style={styles.value}>${deal.releasedAmount}</Text></View>
+        <View style={styles.infoRow}><Text style={styles.label}>Amount</Text><Text style={styles.value}>{deal.currency} {deal.amount}</Text></View>
+        <View style={styles.infoRow}><Text style={styles.label}>Funded</Text><Text style={styles.value}>{deal.currency} {deal.fundedAmount}</Text></View>
+        <View style={styles.infoRow}><Text style={styles.label}>Released</Text><Text style={styles.value}>{deal.currency} {deal.releasedAmount}</Text></View>
+        <View style={styles.infoRow}><Text style={styles.label}>Service fee</Text><Text style={styles.value}>{deal.currency} {deal.serviceFee}</Text></View>
       </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>People</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Client</Text>
+          <Text style={styles.value}>{deal.client?.displayName || deal.clientId}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Provider</Text>
+          <Text style={styles.value}>{deal.provider?.displayName || deal.providerId}</Text>
+        </View>
+      </View>
+
+      {deal.offer ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Source Offer</Text>
+          <Text style={styles.description}>{deal.offer.title}</Text>
+          <Text style={styles.metaText}>{deal.offer.description}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -147,7 +171,7 @@ export default function DealDetailScreen() {
             <Text style={styles.link}>View Full Timeline</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.timelinePreview}>{deal.timeline.length} events recorded</Text>
+        <Text style={styles.timelinePreview}>{timeline.length} events recorded</Text>
       </View>
 
       <View style={styles.section}>
@@ -171,6 +195,9 @@ export default function DealDetailScreen() {
           <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push(`/deals/dispute?id=${deal.id}` as any)}>
             <Text style={styles.secondaryButtonText}>Open Dispute</Text>
           </TouchableOpacity>
+        ) : null}
+        {deal.status === 'created' && !isClient ? (
+          <Text style={styles.metaText}>Waiting for the client to fund this deal.</Text>
         ) : null}
       </View>
 
@@ -220,12 +247,13 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm },
   badgeText: { ...typography.caption, fontWeight: '600', textTransform: 'capitalize' },
   description: { ...typography.body, color: colors.textSecondary },
+  metaText: { ...typography.body, color: colors.textSecondary, marginTop: spacing.xs },
   section: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   sectionTitle: { ...typography.h2, color: colors.text, marginBottom: spacing.sm },
   label: { ...typography.body, color: colors.textSecondary },
-  value: { ...typography.body, color: colors.text, fontWeight: '600' },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  value: { ...typography.body, color: colors.text, fontWeight: '600', flex: 1, textAlign: 'right' },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   timelinePreview: { ...typography.body, color: colors.textSecondary },
   link: { ...typography.body, color: colors.primary, fontWeight: '600' },
   primaryButton: { backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', marginBottom: spacing.sm },
