@@ -28,23 +28,24 @@ export default function OfferDetailScreen() {
       try {
         setLoading(true);
         setError(null);
-        const data = await offerService.getOffer(id as string);
+        const data: any = await offerService.getOffer(id as string);
+        const provider: any = data.provider || {};
 
-        // Try to fetch provider trust profile
         let trust = null;
         try {
-          trust = await trustService.getTrustProfile(data.providerId || data.provider?.id);
-        } catch (e) {
+          trust = await trustService.getTrustProfile(data.providerId || provider.id);
+        } catch (_e) {
           // Trust not found, will use fallback
         }
         setProviderTrust(trust);
         setOffer({
           ...data,
           provider: {
-            ...data.provider,
-            trustScore: trust?.trustScore ?? data.provider?.trustScore ?? null,
-            verificationLevel: trust?.verificationLevel ?? data.provider?.verificationLevel ?? null,
-            completedDeals: trust?.completedDeals ?? data.provider?.completedDeals ?? null,
+            ...provider,
+            id: provider.id || data.providerId,
+            trustScore: trust?.trustScore ?? provider.trustScore ?? null,
+            verificationLevel: trust?.verificationLevel ?? provider.verificationLevel ?? null,
+            completedDeals: trust?.completedDeals ?? provider.completedDeals ?? null,
           },
         });
 
@@ -73,6 +74,8 @@ export default function OfferDetailScreen() {
 
   if (loading) return <LoadingState fullScreen message="Loading offer..." />;
   if (error || !offer) return <ErrorState message={error || 'Offer not found'} />;
+
+  const provider: any = offer.provider || {};
 
   return (
     <ScrollView style={styles.container}>
@@ -108,15 +111,13 @@ export default function OfferDetailScreen() {
         <Text style={styles.sectionLabel}>Provider</Text>
         <View style={styles.providerRow}>
           <View style={styles.providerInfo}>
-            <Text style={styles.providerName}>{offer.provider.displayName || 'Unknown'}</Text>
+            <Text style={styles.providerName}>{provider.displayName || 'Unknown'}</Text>
             <View style={styles.providerStats}>
               <Text style={styles.trustScore}>
-                Trust Score: {offer.provider.trustScore != null ? offer.provider.trustScore : 'N/A'}
+                Trust Score: {provider.trustScore != null ? provider.trustScore : 'N/A'}
               </Text>
               <Text style={styles.completedDeals}>
-                {offer.provider.completedDeals != null
-                  ? `${offer.provider.completedDeals} deals`
-                  : 'N/A deals'}
+                {provider.completedDeals != null ? `${provider.completedDeals} deals` : 'N/A deals'}
               </Text>
             </View>
           </View>
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.success.main,
+    color: theme.colors.success,
   },
   deliveryTime: { fontSize: theme.typography.fontSize.md, color: theme.colors.text.primary },
   emptyText: {
@@ -203,22 +204,22 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   providerStats: { flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.xs },
-  trustScore: { fontSize: theme.typography.fontSize.sm, color: theme.colors.primary[400] },
+  trustScore: { fontSize: theme.typography.fontSize.sm, color: theme.colors.primary },
   completedDeals: { fontSize: theme.typography.fontSize.sm, color: theme.colors.text.tertiary },
   reviewSummary: { gap: theme.spacing.sm, marginBottom: theme.spacing.md },
   metaText: { fontSize: theme.typography.fontSize.sm, color: theme.colors.text.tertiary },
-  errorText: { fontSize: theme.typography.fontSize.sm, color: theme.colors.error.main },
+  errorText: { fontSize: theme.typography.fontSize.sm, color: theme.colors.error },
   actionsContainer: { padding: theme.spacing.lg, gap: theme.spacing.md },
   primaryButton: {
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.primary[500],
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
   },
   primaryButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.primary[950],
+    color: theme.colors.white,
   },
   footer: { height: theme.spacing.xl * 2 },
 });
