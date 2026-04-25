@@ -36,6 +36,8 @@ jobs:
       ENABLE_SWAGGER: 'false'
       DATABASE_URL: postgresql://workai:workai@localhost:5432/workai_smoke?schema=public
       JWT_SECRET: smoke-test-secret
+      SMOKE_PROVIDER_ID: 11111111-1111-4111-8111-111111111111
+      SMOKE_OFFER_ID: 22222222-2222-4222-8222-222222222222
 
     steps:
       - name: Checkout
@@ -55,6 +57,67 @@ jobs:
 
       - name: Apply migrations
         run: npx prisma migrate deploy
+
+      - name: Seed offer detail smoke data
+        run: |
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const prisma = new PrismaClient();
+
+          async function main() {
+            const providerId = process.env.SMOKE_PROVIDER_ID;
+            const offerId = process.env.SMOKE_OFFER_ID;
+
+            await prisma.user.upsert({
+              where: { id: providerId },
+              update: {
+                email: 'provider-smoke@example.com',
+                trustScore: 87,
+              },
+              create: {
+                id: providerId,
+                email: 'provider-smoke@example.com',
+                passwordHash: 'smoke-password-hash',
+                role: 'member',
+                trustScore: 87,
+              },
+            });
+
+            await prisma.offer.upsert({
+              where: { id: offerId },
+              update: {
+                providerId,
+                title: 'Smoke Test Offer Detail',
+                description: 'Smoke test offer used to verify public offer detail provider contract.',
+                category: 'testing',
+                price: 123,
+                currency: 'USD',
+                pricingType: 'fixed',
+                status: 'active',
+              },
+              create: {
+                id: offerId,
+                providerId,
+                title: 'Smoke Test Offer Detail',
+                description: 'Smoke test offer used to verify public offer detail provider contract.',
+                category: 'testing',
+                price: 123,
+                currency: 'USD',
+                pricingType: 'fixed',
+                status: 'active',
+              },
+            });
+          }
+
+          main()
+            .catch((error) => {
+              console.error(error);
+              process.exit(1);
+            })
+            .finally(async () => {
+              await prisma.$disconnect();
+            });
+          NODE
 
       - name: Build backend
         run: npm run build
@@ -80,6 +143,53 @@ jobs:
       - name: Verify health response
         run: |
           node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('/tmp/health.json','utf8')); if(data.status !== 'ok') { console.error(data); process.exit(1); }"
+
+      - name: Smoke public offer detail provider contract
+        run: |
+          status=$(curl -sS -o /tmp/offer-detail.json -w '%{http_code}' "http://127.0.0.1:3000/api/v1/offers/${SMOKE_OFFER_ID}")
+          cat /tmp/offer-detail.json
+          if [ "$status" != "200" ]; then
+            echo "Expected 200 for offer detail, got ${status}"
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/offer-detail.json', 'utf8'));
+          const offer = payload.data;
+
+          if (!offer) {
+            console.error('Missing data wrapper', payload);
+            process.exit(1);
+          }
+
+          const expected = {
+            id: process.env.SMOKE_OFFER_ID,
+            providerId: process.env.SMOKE_PROVIDER_ID,
+            title: 'Smoke Test Offer Detail',
+            providerEmail: 'provider-smoke@example.com',
+            providerTrustScore: 87,
+          };
+
+          if (offer.id !== expected.id || offer.providerId !== expected.providerId || offer.title !== expected.title) {
+            console.error('Offer core fields mismatch', { offer, expected });
+            process.exit(1);
+          }
+
+          if (!offer.provider) {
+            console.error('Missing provider summary', offer);
+            process.exit(1);
+          }
+
+          if (
+            offer.provider.id !== expected.providerId ||
+            offer.provider.email !== expected.providerEmail ||
+            offer.provider.displayName !== expected.providerEmail ||
+            offer.provider.trustScore !== expected.providerTrustScore
+          ) {
+            console.error('Provider summary mismatch', { provider: offer.provider, expected });
+            process.exit(1);
+          }
+          NODE
 
       - name: Smoke protected routes require authentication
         run: |
