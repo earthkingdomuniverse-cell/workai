@@ -104,9 +104,36 @@ function ensureTransition(current: string, next: DealStatus, allowed: DealStatus
   }
 }
 
+function serializeUserSummary(user: any) {
+  if (!user) return undefined;
+  return {
+    id: user.id,
+    displayName: user.email || 'User',
+    email: user.email,
+    trustScore: user.trustScore,
+  };
+}
+
+function serializeOfferSummary(offer: any) {
+  if (!offer) return undefined;
+  return {
+    id: offer.id,
+    providerId: offer.providerId,
+    title: offer.title,
+    description: offer.description,
+    price: offer.price,
+    currency: offer.currency,
+    pricingType: offer.pricingType,
+    status: offer.status,
+  };
+}
+
 function serializeDeal(deal: any) {
   return {
     ...deal,
+    offer: serializeOfferSummary(deal.offer),
+    provider: serializeUserSummary(deal.provider),
+    client: serializeUserSummary(deal.client),
     createdAt: deal.createdAt?.toISOString?.() ?? deal.createdAt,
     updatedAt: deal.updatedAt?.toISOString?.() ?? deal.updatedAt,
     milestones: deal.milestones?.map((milestone: any) => ({
@@ -129,6 +156,32 @@ const includeDealRelations = {
   transactions: true,
   disputes: true,
   reviews: true,
+  offer: {
+    select: {
+      id: true,
+      providerId: true,
+      title: true,
+      description: true,
+      price: true,
+      currency: true,
+      pricingType: true,
+      status: true,
+    },
+  },
+  provider: {
+    select: {
+      id: true,
+      email: true,
+      trustScore: true,
+    },
+  },
+  client: {
+    select: {
+      id: true,
+      email: true,
+      trustScore: true,
+    },
+  },
 };
 
 const deals: FastifyPluginAsync = async (fastify) => {
@@ -149,25 +202,82 @@ const deals: FastifyPluginAsync = async (fastify) => {
     const user = await requireAuthenticated(request, reply);
     const body = request.body as Record<string, any>;
 
-    if (!body.title || String(body.title).trim().length < 5) {
+    let providerId = body.providerId ? String(body.providerId) : undefined;
+    let clientId = body.clientId ? String(body.clientId) : undefined;
+    let title = body.title ? String(body.title).trim() : '';
+    let description = body.description ? String(body.description).trim() : '';
+    let amount = body.amount !== undefined ? Number(body.amount) : undefined;
+    let currency = body.currency || 'VND';
+
+    if (body.offerId) {
+      const offer = await prisma.offer.findUnique({ where: { id: String(body.offerId) } });
+
+      if (!offer) {
+        throw new AppError('Offer not found', { code: 'NOT_FOUND', statusCode: 404 });
+      }
+
+      if (offer.status !== 'active') {
+        throw new AppError('Offer is not available for deal creation', {
+          code: 'BAD_REQUEST',
+          statusCode: 400,
+        });
+      }
+
+      if (offer.providerId === user.userId) {
+        throw new AppError('Provider cannot create a client deal from their own offer', {
+          code: 'BAD_REQUEST',
+          statusCode: 400,
+        });
+      }
+
+      providerId = offer.providerId;
+      clientId = user.userId;
+      title = title || offer.title;
+      description = description || offer.description;
+      amount = amount ?? offer.price;
+      currency = body.currency || offer.currency;
+    }
+
+    if (body.requestId && (!providerId || !clientId || !title || !description || amount === undefined)) {
+      const workRequest = await prisma.workRequest.findUnique({ where: { id: String(body.requestId) } });
+
+      if (!workRequest) {
+        throw new AppError('Request not found', { code: 'NOT_FOUND', statusCode: 404 });
+      }
+
+      providerId = providerId || user.userId;
+      clientId = clientId || workRequest.requesterId;
+      title = title || workRequest.title;
+      description = description || workRequest.description;
+      amount = amount ?? workRequest.budgetMax ?? workRequest.budgetMin ?? undefined;
+      currency = body.currency || workRequest.currency;
+    }
+
+    if (!title || title.length < 5) {
       throw new AppError('Title must be at least 5 characters', { code: 'VALIDATION_ERROR', statusCode: 400 });
     }
 
-    if (!body.description || String(body.description).trim().length < 20) {
+    if (!description || description.length < 20) {
       throw new AppError('Description must be at least 20 characters', { code: 'VALIDATION_ERROR', statusCode: 400 });
     }
 
-    if (!body.amount || Number(body.amount) <= 0) {
+    if (amount === undefined || !Number.isFinite(amount) || amount <= 0) {
       throw new AppError('Amount must be positive', { code: 'VALIDATION_ERROR', statusCode: 400 });
     }
 
-    if (!body.providerId && !body.clientId) {
-      throw new AppError('providerId or clientId is required', { code: 'VALIDATION_ERROR', statusCode: 400 });
+    if (!providerId || !clientId) {
+      throw new AppError('providerId/clientId or offerId/requestId is required', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
     }
 
-    const amount = Number(body.amount);
-    const providerId = body.providerId || user.userId;
-    const clientId = body.clientId || user.userId;
+    if (providerId === clientId) {
+      throw new AppError('Provider and client must be different users', {
+        code: 'VALIDATION_ERROR',
+        statusCode: 400,
+      });
+    }
 
     const deal = await prisma.deal.create({
       data: {
@@ -177,10 +287,10 @@ const deals: FastifyPluginAsync = async (fastify) => {
         providerId,
         clientId,
         status: 'created',
-        title: String(body.title).trim(),
-        description: String(body.description).trim(),
+        title,
+        description,
         amount,
-        currency: body.currency || 'VND',
+        currency,
         fundedAmount: 0,
         releasedAmount: 0,
         serviceFee: Math.round(amount * 0.05),
