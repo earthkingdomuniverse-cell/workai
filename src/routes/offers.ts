@@ -16,9 +16,28 @@ function requireOfferUser(user: { userId: string }) {
 
 function serializeOffer(offer: any) {
   return {
-    ...offer,
-    skills: [],
-    deliveryTime: undefined,
+    id: offer.id,
+    providerId: offer.providerId,
+    title: offer.title,
+    description: offer.description,
+    category: offer.category,
+    price: offer.price,
+    currency: offer.currency,
+    pricingType: offer.pricingType,
+    status: offer.status,
+    skills: offer.skills || [],
+    deliveryTime: offer.deliveryTime,
+    views: offer.views || 0,
+    likes: offer.likes || 0,
+    proposalsCount: offer.proposalsCount || 0,
+    provider: offer.provider
+      ? {
+          id: offer.provider.id,
+          displayName: offer.provider.email || 'Provider',
+          email: offer.provider.email,
+          trustScore: offer.provider.trustScore,
+        }
+      : undefined,
     createdAt: offer.createdAt?.toISOString?.() ?? offer.createdAt,
     updatedAt: offer.updatedAt?.toISOString?.() ?? offer.updatedAt,
   };
@@ -48,20 +67,55 @@ const offers: FastifyPluginAsync = async (fastify) => {
     if (query.category && query.category !== 'all') where.category = query.category;
     if (query.status && query.status !== 'all') where.status = query.status;
 
-    const items = await prisma.offer.findMany({ where, orderBy: { createdAt: 'desc' } });
+    const items = await prisma.offer.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        provider: {
+          select: {
+            id: true,
+            email: true,
+            trustScore: true,
+          },
+        },
+      },
+    });
     return successResponse(reply, { items: items.map(serializeOffer), total: items.length });
   });
 
   fastify.get('/offers/mine', async (request, reply) => {
     const user = await authenticate(request, reply);
     requireOfferUser(user);
-    const items = await prisma.offer.findMany({ where: { providerId: user.userId }, orderBy: { createdAt: 'desc' } });
+    const items = await prisma.offer.findMany({
+      where: { providerId: user.userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        provider: {
+          select: {
+            id: true,
+            email: true,
+            trustScore: true,
+          },
+        },
+      },
+    });
     return successResponse(reply, { items: items.map(serializeOffer), total: items.length });
   });
 
   fastify.get('/offers/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const offer = await prisma.offer.findUnique({ where: { id } });
+    const offer = await prisma.offer.findUnique({
+      where: { id },
+      include: {
+        provider: {
+          select: {
+            id: true,
+            email: true,
+            trustScore: true,
+          },
+        },
+      },
+    });
     if (!offer) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Offer not found' } });
     return successResponse(reply, serializeOffer(offer));
   });
@@ -166,6 +220,15 @@ const offers: FastifyPluginAsync = async (fastify) => {
         category: body.category || 'general',
         status: body.status || 'active',
       },
+      include: {
+        provider: {
+          select: {
+            id: true,
+            email: true,
+            trustScore: true,
+          },
+        },
+      },
     });
 
     return createdResponse(reply, serializeOffer(offer));
@@ -195,6 +258,15 @@ const offers: FastifyPluginAsync = async (fastify) => {
         pricingType: body.pricingType,
         category: body.category,
         status: body.status,
+      },
+      include: {
+        provider: {
+          select: {
+            id: true,
+            email: true,
+            trustScore: true,
+          },
+        },
       },
     });
 
