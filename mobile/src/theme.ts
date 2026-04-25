@@ -23,69 +23,15 @@ export const colors = {
 } as const;
 
 export const nestedColors = {
-  primary: {
-    300: colors.primaryLight,
-    500: colors.primary,
-    700: colors.primaryDark,
-  },
-  secondary: {
-    500: colors.secondary,
-  },
-  success: {
-    light: '#86efac',
-    main: colors.success,
-    dark: '#15803d',
-    300: '#86efac',
-    500: colors.success,
-    700: '#15803d',
-  },
-  error: {
-    light: '#f87171',
-    main: colors.error,
-    dark: '#b91c1c',
-    300: '#f87171',
-    500: colors.error,
-    700: '#b91c1c',
-  },
-  warning: {
-    light: '#fbbf24',
-    main: colors.warning,
-    dark: '#b45309',
-    300: '#fbbf24',
-    500: colors.warning,
-    700: '#b45309',
-  },
-  info: {
-    light: '#67e8f9',
-    main: colors.info,
-    dark: '#0e7490',
-    300: '#67e8f9',
-    500: colors.info,
-    700: '#0e7490',
-  },
-  background: {
-    primary: colors.background,
-    secondary: colors.backgroundSecondary,
-    tertiary: colors.backgroundTertiary,
-    elevated: colors.input,
-  },
-  surface: {
-    card: colors.card,
-    dialog: colors.backgroundTertiary,
-    input: colors.input,
-    border: colors.border,
-  },
-  text: {
-    primary: colors.text,
-    secondary: colors.textSecondary,
-    tertiary: colors.textTertiary,
-    disabled: colors.textDisabled,
-    inverse: colors.black,
-  },
-  neutral: {
-    0: colors.white,
-    950: colors.black,
-  },
+  primaryScale: { 300: colors.primaryLight, 500: colors.primary, 700: colors.primaryDark },
+  secondaryScale: { 500: colors.secondary },
+  successScale: { light: '#86efac', main: colors.success, dark: '#15803d', 300: '#86efac', 500: colors.success, 700: '#15803d' },
+  errorScale: { light: '#f87171', main: colors.error, dark: '#b91c1c', 300: '#f87171', 500: colors.error, 700: '#b91c1c' },
+  warningScale: { light: '#fbbf24', main: colors.warning, dark: '#b45309', 300: '#fbbf24', 500: colors.warning, 700: '#b45309' },
+  infoScale: { light: '#67e8f9', main: colors.info, dark: '#0e7490', 300: '#67e8f9', 500: colors.info, 700: '#0e7490' },
+  backgroundColors: { primary: colors.background, secondary: colors.backgroundSecondary, tertiary: colors.backgroundTertiary, elevated: colors.input },
+  surfaceColors: { card: colors.card, dialog: colors.backgroundTertiary, input: colors.input, border: colors.border },
+  textColors: { primary: colors.text, secondary: colors.textSecondary, tertiary: colors.textTertiary, disabled: colors.textDisabled, inverse: colors.black },
 } as const;
 
 export const spacing = {
@@ -140,17 +86,37 @@ export const typography = {
   },
 } as const;
 
-export const theme = {
+export const shadows = {
+  sm: {},
+  md: {},
+  lg: {},
+  xl: {},
+} as const;
+
+const nestedCompatibility = {
+  background: nestedColors.backgroundColors,
+  surface: nestedColors.surfaceColors,
+  text: nestedColors.textColors,
+  primaryScale: nestedColors.primaryScale,
+  secondaryScale: nestedColors.secondaryScale,
+  successScale: nestedColors.successScale,
+  errorScale: nestedColors.errorScale,
+  warningScale: nestedColors.warningScale,
+  infoScale: nestedColors.infoScale,
+};
+
+export const theme: any = {
   colors: {
     ...colors,
-    ...nestedColors,
+    ...nestedCompatibility,
   },
   spacing,
   radius,
   typography,
-} as const;
+  shadows,
+};
 
-export const themeCompat = { colors, spacing, radius, typography } as const;
+export const themeCompat = { colors, spacing, radius, typography, shadows } as const;
 export const mobileTheme = themeCompat;
 export const rootMobileTheme = theme;
 export default theme;
