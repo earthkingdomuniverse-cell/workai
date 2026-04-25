@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../theme';
 
-type TextFieldProps = Omit<TextInputProps, 'onChange'> & {
+export type TextFieldProps = Omit<TextInputProps, 'onChange'> & {
   label?: string;
   error?: string;
   onChange?: (value: string) => void;
@@ -26,14 +26,8 @@ export function TextField({ label, error, style, onChange, onChangeText, ...prop
 export default TextField;
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
+  container: { marginBottom: spacing.md },
+  label: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
   input: {
     backgroundColor: colors.card,
     borderColor: colors.border,
@@ -43,9 +37,5 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...typography.body,
   },
-  error: {
-    ...typography.caption,
-    color: colors.error,
-    marginTop: spacing.xs,
-  },
+  error: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
 });
