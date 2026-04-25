@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, typography } from '../../src/theme';
+import { colors, radius, spacing, typography } from '../theme';
 
 interface ProofCardProps {
   type: 'id' | 'address' | 'education' | 'employment' | 'financial' | 'other';
@@ -13,7 +13,6 @@ interface ProofCardProps {
 const ProofCard: React.FC<ProofCardProps> = ({
   type,
   status,
-  documentUrl,
   verifiedAt,
   expiresAt,
 }) => {
